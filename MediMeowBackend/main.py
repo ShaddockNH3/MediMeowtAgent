@@ -72,7 +72,7 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
 async def general_exception_handler(request: Request, exc: Exception):
     """处理所有未捕获的异常"""
     import traceback
-    print(f"❌ 未捕获的异常: {str(exc)}")
+    print(f"未捕获的异常: {str(exc)}")
     traceback.print_exc()
     
     return JSONResponse(
@@ -102,14 +102,8 @@ async def startup_event():
     """应用启动事件"""
     # 创建数据库表
     Base.metadata.create_all(bind=engine)
-    print("✅ 数据库表创建完成")
-    print(f"✅ 应用已启动")
-
-
-@app.on_event("shutdown")
-async def shutdown_event():
-    """应用关闭事件"""
-    print("👋 应用已关闭")
+    print("数据库表创建完成")
+    print("应用已启动")
 
 
 @app.get("/", tags=["Root"])

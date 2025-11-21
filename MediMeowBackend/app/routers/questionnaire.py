@@ -309,10 +309,32 @@ async def get_questionnaire(
                 "value": value
             })
     
+    # 转换问题格式，确保符合 API 规范
+    formatted_questions = []
+    for question in questionnaire.questions:
+        formatted_question = {
+            "question_id": question.get("id", ""),              # 必需
+            "question_type": question.get("type", "text"),      # 必需
+            "label": question.get("question", ""),              # 必需（题目标题）
+            "is_required": "是" if question.get("required", False) else "否",  # 必需
+        }
+        
+        # 可选字段
+        if "placeholder" in question:
+            formatted_question["placeholder"] = question["placeholder"]
+        
+        if "options" in question:
+            formatted_question["options"] = question["options"]
+        
+        if "max_files" in question:
+            formatted_question["max_files"] = str(question["max_files"])
+        
+        formatted_questions.append(formatted_question)
+    
     return success_response(
         data={
             "questionnaires_id": questionnaire.id,
-            "questions": questionnaire.questions,
+            "questions": formatted_questions,
             "saved_answers": saved_answers
         }
     )
