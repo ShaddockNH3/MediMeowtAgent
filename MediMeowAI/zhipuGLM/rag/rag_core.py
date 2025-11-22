@@ -2,8 +2,8 @@ import os
 from langchain_community.document_loaders import DirectoryLoader, TextLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_community.vectorstores import Chroma
-import config.config as config
-import utils.utils as utils
+from ..config import config
+from ..utils import utils
 
 def build_or_load_rag_index():
     """加载或从文档构建向量数据库"""

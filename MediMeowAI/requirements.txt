@@ -1,0 +1,10 @@
+grpcio
+grpcio-tools
+protobuf
+langchain
+langchain-community
+langchain-chroma
+langchain-openai
+sentence-transformers
+requests
+zhipuai

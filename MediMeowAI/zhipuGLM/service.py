@@ -8,11 +8,12 @@ from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_core.documents import Document
 from langchain_community.vectorstores import Chroma
+
 # 导入底层依赖模块
-import MediMeowAI.zhipuGLM.config as config
-import MediMeowAI.zhipuGLM.prompts.prompts as prompts
-import MediMeowAI.zhipuGLM.utils.utils as utils
-import MediMeowAI.zhipuGLM.rag.rag_core as rag_core
+from .config import config
+from .prompts import prompts
+from .utils import utils
+from .rag import rag_core
 
 # -----------------------------------------------------------------
 # 1. Protobuf 消息结构模拟

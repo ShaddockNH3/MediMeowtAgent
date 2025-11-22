@@ -2,7 +2,7 @@ import os
 import base64
 from langchain_community.embeddings import HuggingFaceBgeEmbeddings
 from langchain_openai import ChatOpenAI
-import config.config as config # 导入配置文件
+from ..config import config
 
 def get_bge_embedding_model():
     """配置 BAAI/bge-small-zh 本地词嵌入模型 (零成本)"""

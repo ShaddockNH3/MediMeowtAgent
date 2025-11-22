@@ -1,0 +1,33 @@
+syntax = "proto3";
+option java_package = "com.example";
+option objc_class_prefix = "MED";
+option optimize_for = SPEED;
+option cc_enable_arenas = true;
+
+package medical_ai;
+
+// 1. 输入请求
+message AnalysisRequest {
+  string patient_text_data = 1;  // 病人文本（UTF-8字符串）
+  string image_base64 = 2;       // Base64图片（字符串）
+  bool stream = 3;               // 是否流式
+  string patient_department = 4; // 选择科室
+}
+
+// 2. 同步响应（完整报告）
+message AnalysisReport {
+  string structured_report = 1;  // 结构化报告（UTF-8字符串）
+  string status = 2;             // 状态（SUCCESS/DEPARTMENT_MISMATCH）
+  string message = 3;            // 附加信息
+}
+
+// 3. 流式响应（二进制传输，避免编码问题）
+message StreamChunk {
+  bytes chunk_data = 1;          // 改为bytes类型！支持二进制/字符串
+  bool is_end = 2;               // 结束标记
+}
+
+// 4. gRPC服务接口
+service MedicalAIService {
+  rpc ProcessMedicalAnalysis (AnalysisRequest) returns (stream StreamChunk);
+}
