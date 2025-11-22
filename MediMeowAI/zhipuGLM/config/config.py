@@ -7,7 +7,7 @@ import os
 # =========================================================
 
 # GLM-4.1V-Thinking-Flash 配置
-os.environ["GLM_API_KEY"] = "b2c2b0ae9de749b09a1354e0e4a6f7e6.HatEO3ve0fa7kO25"
+os.environ["GLM_API_KEY"] = ""
 GLM_API_BASE = "https://open.bigmodel.cn/api/paas/v4/"
 
 # --- 词嵌入模型配置 ---
