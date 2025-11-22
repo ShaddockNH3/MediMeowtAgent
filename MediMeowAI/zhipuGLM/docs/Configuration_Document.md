@@ -51,25 +51,19 @@ pip install langchain langchain-community langchain-chroma langchain-openai sent
 本项目依赖智谱 AI (ZhipuAI) 的模型服务。
 
 1. **获取密钥**：访问 [智谱 AI 开放平台](https://bigmodel.cn/login?redirect=%2Fusercenter%2Fproj-mgmt%2Fapikeys) 并注册/登录，创建一个新的 API Key。
-2. **修改配置文件**：打开项目目录下的 `config/config.py` 文件，定位到 API 配置部分。
-3. **填入密钥**：将获取到的 API Key 替换掉 \`os.environ`os.environ["GLM_API_KEY"]` 中的空字符串。
+2. **修改环境变量文件**：打开项目目录下的 `.env` 文件（位于 MediMeowAI 文件夹中）。
+3. **填入密钥**：将获取到的 API Key 替换掉 `GLM_API_KEY=` 后的空值。
 
 *修改前：*
 
-```python
-os.environ["GLM_API_KEY"] = ""
+```env
+GLM_API_KEY=
 ```
 
 *修改后（示例）：*
 
-```python
-# ==========================
-# API 配置
-# =========================================================
-
-# 请将 "your_api_key_here" 替换为您实际申请到的 key，保留引号
-os.environ["GLM_API_KEY"] = "1234567890abcdef.12345678" 
-GLM_API_BASE = "https://open.bigmodel.cn/api/paas/v4/"
+```env
+GLM_API_KEY=1234567890abcdef.12345678
 ```
 
 ## 4. 测试数据准备

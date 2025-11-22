@@ -1,13 +1,17 @@
 # config.py
 
 import os
+from dotenv import load_dotenv
+
+# 加载 .env 文件
+dotenv_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), '.env')
+load_dotenv(dotenv_path=dotenv_path)
 
 # ==========================
 # API 配置
 # =========================================================
 
 # GLM-4.1V-Thinking-Flash 配置
-os.environ["GLM_API_KEY"] = ""
 GLM_API_BASE = "https://open.bigmodel.cn/api/paas/v4/"
 
 # --- 词嵌入模型配置 ---

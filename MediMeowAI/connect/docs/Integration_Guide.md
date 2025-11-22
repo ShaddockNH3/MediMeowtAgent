@@ -12,7 +12,7 @@
    - 安装依赖：`pip install grpcio grpcio-tools zhipuai langchain-core langchain-community chromadb`
 
 3. **API 密钥配置**：
-   - 在 `config/config.py` 中设置 `os.environ["GLM_API_KEY"] = "your_api_key_here"`
+   - 在 `MediMeowAI/.env` 文件中设置 `GLM_API_KEY=your_api_key_here`
    - 获取密钥：访问 [智谱 AI 开放平台](https://bigmodel.cn/login?redirect=%2Fusercenter%2Fproj-mgmt%2Fapikeys)
 
 4. **环境变量**：

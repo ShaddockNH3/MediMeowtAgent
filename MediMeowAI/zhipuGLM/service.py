@@ -1,3 +1,9 @@
+import sys
+import os
+
+# 添加当前目录到路径
+sys.path.insert(0, os.path.dirname(__file__))
+
 import os
 import json
 from typing import List, Generator, Union, Optional
@@ -10,10 +16,10 @@ from langchain_core.documents import Document
 from langchain_community.vectorstores import Chroma
 
 # 导入底层依赖模块
-from .config import config
-from .prompts import prompts
-from .utils import utils
-from .rag import rag_core
+import config.config as config
+import prompts.prompts as prompts
+import utils.utils as utils
+import rag.rag_core as rag_core
 
 # -----------------------------------------------------------------
 # 1. Protobuf 消息结构模拟

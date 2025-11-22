@@ -8,3 +8,4 @@ langchain-openai
 sentence-transformers
 requests
 zhipuai
+python-dotenv

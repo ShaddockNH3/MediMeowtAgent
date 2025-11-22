@@ -1,3 +1,9 @@
+import sys
+import os
+
+# 添加当前目录到路径
+sys.path.insert(0, os.path.dirname(__file__))
+
 import os
 from typing import List
 from operator import itemgetter
