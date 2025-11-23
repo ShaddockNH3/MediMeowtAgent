@@ -2,6 +2,7 @@
 
 # MediMeow 数据库重置脚本
 # 用于开发和测试环境快速重置数据库
+# 如果数据库不存在，会自动运行初始化
 
 set -e
 
@@ -13,7 +14,7 @@ echo ""
 # 数据库配置
 DB_HOST=${DB_HOST:-127.0.0.1}
 DB_PORT=${DB_PORT:-3306}
-DB_NAME=${DB_NAME:-medimoew_db}
+DB_NAME=${DB_NAME:-medimeow_db}
 DB_USER=${DB_USER:-root}
 DB_PASS=${DB_PASS:-12345}
 
@@ -23,13 +24,21 @@ echo "   Database: $DB_NAME"
 echo "   User: $DB_USER"
 echo ""
 
-# 检查 MySQL 是否可访问
-echo "🔍 检查数据库连接..."
-if ! mysql -h"$DB_HOST" -P"$DB_PORT" -u"$DB_USER" -p"$DB_PASS" -e "SELECT 1" &>/dev/null; then
-    echo "❌ 无法连接到数据库，请检查配置"
-    exit 1
+# 检查数据库是否存在，如果不存在则运行初始化
+echo "🔍 检查数据库状态..."
+if ! mysql -h"$DB_HOST" -P"$DB_PORT" -u"$DB_USER" -p"$DB_PASS" -e "USE $DB_NAME; SELECT 1" &>/dev/null; then
+    echo "⚠️  数据库不存在或无法访问，运行初始化脚本..."
+    if [ -f "./init_db.sh" ]; then
+        ./init_db.sh
+        echo ""
+        echo "🔄 继续数据库重置..."
+    else
+        echo "❌ 找不到 init_db.sh 脚本，请先运行初始化"
+        exit 1
+    fi
+else
+    echo "✅ 数据库连接成功"
 fi
-echo "✅ 数据库连接成功"
 echo ""
 
 # 删除并重建数据库
@@ -39,9 +48,10 @@ mysql -h"$DB_HOST" -P"$DB_PORT" -u"$DB_USER" -p"$DB_PASS" -e "DROP DATABASE IF E
 echo "📦 重新创建数据库..."
 mysql -h"$DB_HOST" -P"$DB_PORT" -u"$DB_USER" -p"$DB_PASS" -e "CREATE DATABASE $DB_NAME CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
 
-# 导入初始化脚本
-echo "📥 导入初始化数据..."
-mysql -h"$DB_HOST" -P"$DB_PORT" -u"$DB_USER" -p"$DB_PASS" "$DB_NAME" < init.sql
+# 运行数据库迁移
+echo "📥 运行数据库迁移..."
+cd "$(dirname "$0")"
+alembic upgrade head
 
 echo ""
 echo "✅ 数据库重置完成！"
