@@ -13,8 +13,8 @@
       <div class="card-body">
         <!-- 登录表单 -->
         <el-form :model="loginForm" :rules="loginRules" ref="loginFormRef" label-position="top" class="login-form">
-          <el-form-item label="邮箱/用户名" prop="email">
-            <el-input v-model="loginForm.email" placeholder="请输入邮箱或用户名" size="large" clearable />
+          <el-form-item label="用户名" prop="email">
+            <el-input v-model="loginForm.email" placeholder="请输入用户名" size="large" clearable />
           </el-form-item>
           <el-form-item label="密码" prop="password">
             <el-input v-model="loginForm.password" type="password" placeholder="请输入密码" size="large" show-password />
@@ -62,9 +62,9 @@ import { ref, reactive } from 'vue';
 import { UserFilled } from '@element-plus/icons-vue';
 import { ElMessage } from 'element-plus';
 import { login, register } from './api/PatientLoginAPI.js';
-import { useRouter } from 'vue-router'; // 引入 useRouter
+import { useRouter } from 'vue-router';
 
-const router = useRouter(); // 获取路由实例
+const router = useRouter();
 
 const loading = ref(false);
 const loginFormRef = ref(null);
@@ -86,33 +86,46 @@ const validatePass = (rule, value, callback) => {
 };
 
 const loginRules = {
-  email: [{ required: true, message: '请输入邮箱/用户名', trigger: 'blur' }],
+  email: [{ required: true, message: '请输入手机号', trigger: 'blur' }],
   password: [{ required: true, message: '请输入密码', trigger: 'blur' }],
 };
 
+// ======================= ✨ 核心修改区域 ✨ =======================
 const registerRules = {
-  email: [{ required: true, message: '请输入邮箱/用户名', trigger: 'blur' }],
-  password: [{ required: true, message: '请输入密码', trigger: 'blur' }],
-  confirmPassword: [{ required: true, validator: validatePass, trigger: 'blur' }],
+  // 手机号（email字段）的校验规则
+  email: [
+    { required: true, message: '请输入您的手机号', trigger: 'blur' },
+    { pattern: /^1\d{10}$/, message: '请输入正确的11位手机号', trigger: 'blur' }
+  ],
+  // 密码的校验规则
+  password: [
+    { required: true, message: '请输入您的密码', trigger: 'blur' },
+    { min: 6, max: 18, message: '密码长度需为 6-18 位', trigger: 'blur' }
+  ],
+  // 确认密码的校验规则 (保持不变)
+  confirmPassword: [
+    { required: true, validator: validatePass, trigger: 'blur' }
+  ],
 };
-
 const handleLogin = async () => {
   await loginFormRef.value.validate(async (valid) => {
     if (valid) {
       loading.value = true;
       try {
         const res = await login(loginForm);
-        if (res) {
-          ElMessage.success('登录成功！');
+        // ======================= ✨ 最终修正 ✨ =======================
+        // 根据您提供的后端返回结构 { base: { code: '...', msg: '...' } } 进行判断
+        if (res && res.base && res.base.code === '10000') {
+          ElMessage.success(res.base.msg || '登录成功！');
           console.log('登录成功响应:', res);
-          // ========== ⚡ 关键修改点：跳转到新的病患身份模块路由 ==========
-          router.push({ name: 'PatientIdentity' }); // 使用路由名称进行跳转
-          // =====================================================
+          router.push({ name: 'PatientIdentity' });
         } else {
-          ElMessage.error(res?.msg || '登录失败：未知响应');
+          // 如果失败，显示后端返回的错误信息
+          ElMessage.error(res?.base?.msg || '登录失败：用户名或密码错误');
         }
+        // =============================================================
       } catch (error) {
-        ElMessage.error(error.msg || '登录请求失败');
+        ElMessage.error(error?.base?.msg || '登录请求失败，请检查网络连接');
         console.error('登录失败响应:', error);
       } finally {
         loading.value = false;
@@ -127,17 +140,21 @@ const handleRegister = async () => {
       loading.value = true;
       try {
         const res = await register(registerForm);
-        if (res) {
-          ElMessage.success('注册成功！请登录。');
+        // ======================= ✨ 最终修正 ✨ =======================
+        // 根据您提供的后端返回结构 { base: { code: '...', msg: '...' } } 进行判断
+        if (res && res.base && res.base.code === '10000') {
+          ElMessage.success(res.base.msg || '注册成功！请登录。');
           console.log('注册成功响应:', res);
           registerDialogVisible.value = false;
           loginForm.email = registerForm.email;
           loginForm.password = '';
         } else {
-          ElMessage.error(res?.msg || '注册失败：未知响应');
+          // 如果失败，显示后端返回的错误信息
+          ElMessage.error(res?.base?.msg || '注册失败：该用户已存在');
         }
+        // =============================================================
       } catch (error) {
-        ElMessage.error(error.msg || '注册请求失败');
+        ElMessage.error(error?.base?.msg || '注册请求失败，请检查网络连接');
         console.error('注册失败响应:', error);
       } finally {
         loading.value = false;
@@ -150,7 +167,6 @@ const resetRegisterForm = () => {
   registerFormRef.value?.resetFields();
 }
 </script>
-
 <!-- ... (style 部分保持不变) ... -->
 
 <style scoped>

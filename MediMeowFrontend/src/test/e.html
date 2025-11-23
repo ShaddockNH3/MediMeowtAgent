@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>【最终决战】直接API请求</title>
+    <style>body{font-family: Arial, sans-serif;padding: 20px;} button{font-size: 18px; padding: 10px 15px;} pre{background-color: #eee; padding: 15px; border: 1px solid #ccc; white-space: pre-wrap; word-break: break-all;}</style>
+</head>
+<body>
+    <h1>【最终决战】直接请求，不加引号</h1>
+    <p>这是决定性的一步。我们将直接向后端发送<strong>不带引号</strong>的纯净数据。</p>
+    <button id="testButton">发起最终的登录请求</button>
+    <h3>请求结果:</h3>
+    <pre id="result">等待测试...</pre>
+
+<script>
+    const API_URL = 'http://124.221.70.136:11391/user/login';
+
+    async function finalBattle() {
+        const resultDiv = document.getElementById('result');
+        const data = {
+            phone_number: "13850136583",
+            password: "ShenMiDaZhi"
+        };
+        
+        const formData = new FormData();
+
+        Object.keys(data).forEach(key => {
+            const originalValue = data[key];
+            // 【最终改动！】我们现在发送纯净的、不带引号的值，因为后端已能正确接收数据
+            formData.append(key, originalValue); 
+        });
+
+        console.log(`[最终决战] 准备发送到 ${API_URL}`);
+        formData.forEach((value, key) => console.log(`  - ${key}: ${value}`));
+        resultDiv.textContent = '请求已发送...';
+
+        try {
+            const response = await fetch(API_URL, {
+                method: 'POST',
+                body: formData,
+            });
+
+            const responseData = await response.json();
+            
+            if (response.ok) {
+                resultDiv.textContent = `✅ 登录成功！\n\n${JSON.stringify(responseData, null, 2)}`;
+                resultDiv.style.backgroundColor = '#d4edda';
+            } else {
+                 resultDiv.textContent = `❌ 请求失败！\n\n${JSON.stringify(responseData, null, 2)}`;
+                 resultDiv.style.backgroundColor = '#f8d7da';
+            }
+
+        } catch (error) {
+            console.error("请求失败详情:", error);
+            resultDiv.textContent = `❌ 发生网络错误或CORS错误！\n\n错误信息: ${error.message}\n\n这说明后端没有开启CORS，但至少我们前端代码的逻辑是正确的。`;
+            resultDiv.style.backgroundColor = '#f8d7da';
+        }
+    }
+
+    document.getElementById('testButton').addEventListener('click', finalBattle);
+</script>
+</body>
+</html>

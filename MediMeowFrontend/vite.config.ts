@@ -1,24 +1,23 @@
 // vite.config.ts
-import { defineConfig } from 'vite'
-import vue from '@vitejs/plugin-vue'
+import { defineConfig } from 'vite';
+import vue from '@vitejs/plugin-vue'; // ⚡ 1. 导入 vue 插件
 
-// 从 c.html 中提取的后端服务器地址
-const backendServerUrl = 'http://124.221.70.136:11391';
-
-// https://vitejs.dev/config/
 export default defineConfig({
-  plugins: [vue()],
+  // ⚡ 2. 在 plugins 数组中启用 vue()
+  plugins: [
+    vue(), 
+  ],
   server: {
-    // 配置开发服务器代理，用于解决跨域问题
-    proxy: {
-      // 当请求路径以 '/api' 开头时，触发代理
-      '/api': {
-        target: backendServerUrl, // 目标后端服务器地址
-        changeOrigin: true,       // 允许跨域
-        // 重写请求路径，去掉 '/api' 前缀
-        // 例如：/api/user/login -> /user/login
-        rewrite: (path) => path.replace(/^\/api/, ''), 
-      },
-    },
+    // 确保端口是你想要的，比如 8000
+    // 如果 8000 被占用，Vite 会自动尝试 8001，这是正常的
+    port: 8002, 
+    // ⚡ 我们之前的结论是代理有问题，所以可以暂时注释掉或删除
+    // proxy: {
+    //   '/api': {
+    //     target: 'http://124.221.70.136:11391',
+    //     changeOrigin: true,
+    //     rewrite: (path) => path.replace(/^\/api/, ''),
+    //   },
+    // },
   },
 })

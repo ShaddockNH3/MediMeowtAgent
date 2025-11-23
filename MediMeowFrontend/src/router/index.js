@@ -9,7 +9,7 @@ const routes = [
   // 应用级别的路由（如首页重定向、404页面等）可以放在这里
   {
     path: '/',
-    redirect: '/patient'
+    redirect: '/patient/login'
   },
 
   // 使用展开运算符 (...) 将模块路由合并进来
