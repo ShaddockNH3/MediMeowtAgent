@@ -1,29 +1,40 @@
-import { createRouter, createWebHistory } from 'vue-router'
+import { createRouter, createWebHistory } from 'vue-router';
+import patientRoutes from './patientRoutes'; // 患者端路由（你的原有文件）
+import doctorRoutes from './doctorRoutes'; // 新增的医生端路由
 
-// 1. 导入各个模块的路由配置
-import patientRoutes from './patientRoutes'
-import doctorRoutes from './doctorRoutes'
-
-// 2. 将所有模块的路由数组合并成一个
 const routes = [
-  // 应用级别的路由（如首页重定向、404页面等）可以放在这里
-  {
-    path: '/',
-    redirect: '/patient/login'
-  },
-
-  // 使用展开运算符 (...) 将模块路由合并进来
   ...patientRoutes,
   ...doctorRoutes,
-  
-  // 可以在最后加一个 404 页面
-  // { path: '/:pathMatch(.*)*', name: 'NotFound', component: NotFoundView }
-]
+  // 可添加其他公共路由...
+];
 
-// 3. 创建和导出 router 实例（这部分逻辑不变）
 const router = createRouter({
   history: createWebHistory(),
   routes,
-})
+});
 
-export default router
+// 路由守卫：分别处理医生、患者的登录态
+router.beforeEach((to, from, next) => {
+  const isDoctorRoute = to.path.startsWith('/doctor');
+  const isPatientRoute = to.path.startsWith('/patient');
+  const doctorToken = localStorage.getItem('doctorToken');
+  const patientToken = localStorage.getItem('userToken');
+
+  if (isDoctorRoute) {
+    if (to.meta.requiresAuth && !doctorToken) {
+      next('/doctor/login'); // 医生未登录→跳医生登录页
+    } else {
+      next();
+    }
+  } else if (isPatientRoute) {
+    if (to.meta.requiresAuth && !patientToken) {
+      next('/patient/login'); // 患者未登录→跳患者登录页
+    } else {
+      next();
+    }
+  } else {
+    next();
+  }
+});
+
+export default router;

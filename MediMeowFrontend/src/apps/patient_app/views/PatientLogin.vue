@@ -1,4 +1,4 @@
-<!-- D:\code\ruangong\new\src\apps\patient_app\PatientLogin.vue -->
+<!-- 文件路径: src/apps/patient_app/PatientLogin.vue -->
 <template>
   <div class="login-container">
     <el-card class="login-card">
@@ -54,14 +54,11 @@
   </div>
 </template>
 
-<!-- D:\code\ruangong\new\src\apps\patient_app\PatientLogin.vue -->
-<!-- ... (template 和 script setup 的其他部分保持不变) ... -->
-
 <script setup>
 import { ref, reactive } from 'vue';
 import { UserFilled } from '@element-plus/icons-vue';
 import { ElMessage } from 'element-plus';
-import { login, register } from './api/PatientLoginAPI.js';
+import { login, register } from '../api/PatientLoginAPI.js';
 import { useRouter } from 'vue-router';
 
 const router = useRouter();
@@ -86,44 +83,51 @@ const validatePass = (rule, value, callback) => {
 };
 
 const loginRules = {
-  email: [{ required: true, message: '请输入手机号', trigger: 'blur' }],
+  email: [
+    { required: true, message: '请输入手机号', trigger: 'blur' },
+    { pattern: /^1\d{10}$/, message: '请输入正确的11位手机号', trigger: 'blur' }
+  ],
   password: [{ required: true, message: '请输入密码', trigger: 'blur' }],
 };
 
-// ======================= ✨ 核心修改区域 ✨ =======================
 const registerRules = {
-  // 手机号（email字段）的校验规则
   email: [
     { required: true, message: '请输入您的手机号', trigger: 'blur' },
     { pattern: /^1\d{10}$/, message: '请输入正确的11位手机号', trigger: 'blur' }
   ],
-  // 密码的校验规则
   password: [
     { required: true, message: '请输入您的密码', trigger: 'blur' },
     { min: 6, max: 18, message: '密码长度需为 6-18 位', trigger: 'blur' }
   ],
-  // 确认密码的校验规则 (保持不变)
   confirmPassword: [
     { required: true, validator: validatePass, trigger: 'blur' }
   ],
 };
+
 const handleLogin = async () => {
   await loginFormRef.value.validate(async (valid) => {
     if (valid) {
       loading.value = true;
       try {
         const res = await login(loginForm);
-        // ======================= ✨ 最终修正 ✨ =======================
-        // 根据您提供的后端返回结构 { base: { code: '...', msg: '...' } } 进行判断
         if (res && res.base && res.base.code === '10000') {
           ElMessage.success(res.base.msg || '登录成功！');
           console.log('登录成功响应:', res);
-          router.push({ name: 'PatientIdentity' });
+
+          // 💡 核心修改：保存后端返回的 token 到 localStorage
+          // 注意：请根据您的后端实际返回的 token 路径进行调整，这里假设是 res.data.token
+          if (res.data && res.data.token) {
+            localStorage.setItem('userToken', res.data.token);
+          } else {
+            // 如果后端直接在 res 里返回 token，可以尝试下面这种
+            // if(res.token) { localStorage.setItem('userToken', res.token); }
+            console.warn("登录成功，但未在响应中找到 token。");
+          }
+
+          router.push({ name: 'PatientMain' }); // 登录成功后跳转到主页面
         } else {
-          // 如果失败，显示后端返回的错误信息
           ElMessage.error(res?.base?.msg || '登录失败：用户名或密码错误');
         }
-        // =============================================================
       } catch (error) {
         ElMessage.error(error?.base?.msg || '登录请求失败，请检查网络连接');
         console.error('登录失败响应:', error);
@@ -140,8 +144,6 @@ const handleRegister = async () => {
       loading.value = true;
       try {
         const res = await register(registerForm);
-        // ======================= ✨ 最终修正 ✨ =======================
-        // 根据您提供的后端返回结构 { base: { code: '...', msg: '...' } } 进行判断
         if (res && res.base && res.base.code === '10000') {
           ElMessage.success(res.base.msg || '注册成功！请登录。');
           console.log('注册成功响应:', res);
@@ -149,10 +151,8 @@ const handleRegister = async () => {
           loginForm.email = registerForm.email;
           loginForm.password = '';
         } else {
-          // 如果失败，显示后端返回的错误信息
-          ElMessage.error(res?.base?.msg || '注册失败：该用户已存在');
+          ElMessage.error(res?.base?.msg || '注册失败：该用户已存在或手机号格式不正确');
         }
-        // =============================================================
       } catch (error) {
         ElMessage.error(error?.base?.msg || '注册请求失败，请检查网络连接');
         console.error('注册失败响应:', error);
@@ -167,23 +167,22 @@ const resetRegisterForm = () => {
   registerFormRef.value?.resetFields();
 }
 </script>
-<!-- ... (style 部分保持不变) ... -->
 
 <style scoped>
-/* 桌面端基础样式 (保持不变) */
+/* 桌面端基础样式 */
 .login-container { 
   display: flex; 
   justify-content: center; 
   align-items: center; 
-  min-height: 100vh; /* 使用 min-height 避免移动端浏览器地址栏影响 */
+  min-height: 100vh; 
   width: 100%; 
   background-color: #f0f2f5; 
-  padding: 20px; /* 为小屏幕增加一些边距 */
-  box-sizing: border-box; /* 确保 padding 不会增加总宽度 */
+  padding: 20px; 
+  box-sizing: border-box; 
 }
 .login-card { 
-  width: 100%; /* 基础宽度设为100% */
-  max-width: 420px; /* 最大宽度限制，保证桌面端效果 */
+  width: 100%; 
+  max-width: 420px; 
   border-radius: 12px; 
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1); 
   overflow: hidden; 
@@ -236,50 +235,35 @@ const resetRegisterForm = () => {
   font-weight: 500; 
 }
 
-/* ========================================= */
-/*         🚀 移动端适配样式 🚀           */
-/*  当屏幕宽度小于等于 768px 时应用以下样式  */
-/* ========================================= */
+/* 移动端适配样式 */
 @media (max-width: 768px) {
   .login-container {
-    /* 关键修改：在移动端同样保持垂直居中 */
     align-items: center;   
-    /* 保持水平居中 */
     justify-content: center;   
-    /* 保留一些内边距，防止内容紧贴屏幕边缘 */
     padding: 20px;   
-    /* 恢复背景色，使页面在内容较短时更美观 */
     background-color: #f0f2f5;   
   }
 
   .login-card {
-    /* 移除桌面端的卡片样式，实现接近全屏效果但保持一点间距 */
     max-width: 100%;
     box-shadow: none;
-    border-radius: 0; /* 移动端通常不需要圆角，使其与页面背景统一 */
+    border-radius: 0; 
     border: none;
   }
 
   .login-header {
-    /* 减少头部的垂直内边距 */
     padding: 25px 20px;
   }
 
   .title {
-    /* 缩小标题字体大小 */
     font-size: 22px;
   }
 
   .card-body {
-    /* 减少内容区域的内边距 */
     padding: 25px 20px 20px 20px;
   }
 }
 
-/* ========================================= */
-/*     为屏幕特别窄的手机做进一步优化      */
-/*  当屏幕宽度小于等于 375px 时应用以下样式  */
-/* ========================================= */
 @media (max-width: 375px) {
   .login-header {
     padding: 20px;

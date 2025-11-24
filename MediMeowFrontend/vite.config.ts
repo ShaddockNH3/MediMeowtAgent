@@ -1,23 +1,28 @@
-// vite.config.ts
-import { defineConfig } from 'vite';
-import vue from '@vitejs/plugin-vue'; // ⚡ 1. 导入 vue 插件
+import { fileURLToPath, URL } from 'node:url'
+import { defineConfig } from 'vite'
+import vue from '@vitejs/plugin-vue'
+import vueDevTools from 'vite-plugin-vue-devtools' // 保留医生端的开发工具（可选，不影响核心功能）
 
+// https://vitejs.dev/config/
 export default defineConfig({
-  // ⚡ 2. 在 plugins 数组中启用 vue()
   plugins: [
-    vue(), 
+    vue(), // 患者端配置已有
+    vueDevTools(), // 保留医生端的开发工具（方便调试，不想用可以删掉）
   ],
-  server: {
-    // 确保端口是你想要的，比如 8000
-    // 如果 8000 被占用，Vite 会自动尝试 8001，这是正常的
-    port: 8002, 
-    // ⚡ 我们之前的结论是代理有问题，所以可以暂时注释掉或删除
-    // proxy: {
-    //   '/api': {
-    //     target: 'http://124.221.70.136:11391',
-    //     changeOrigin: true,
-    //     rewrite: (path) => path.replace(/^\/api/, ''),
-    //   },
-    // },
+  resolve: {
+    alias: {
+      // 保留医生端的别名配置（关键！否则医生端代码中 import '@/xxx' 会报错）
+      '@': fileURLToPath(new URL('./src', import.meta.url))
+    },
   },
-})
+  server: {
+    proxy: {
+      // 完全复用患者端的代理配置，一字不改
+      '/api': {
+        target: 'http://124.221.70.136:11391',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api/, ''),
+      },
+    }
+  }
+});

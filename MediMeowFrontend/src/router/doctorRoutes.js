@@ -1,20 +1,48 @@
-// 导入医生端视图组件
-import DoctorView from '../apps/doctor_app/DoctorView.vue'
+// 用 @ 别名导入（推荐，与 tsconfig/vite 配置对齐，更稳定）
+import DoctorLogin from '@/apps/doctor_app/components/DoctorLogin.vue';
+import DoctorView from '@/apps/doctor_app/components/DoctorView.vue'; // 路径完全正确，无需改
+import DoctorQueue from '@/apps/doctor_app/components/DoctorQueue.vue';
+import DoctorSummary from '@/apps/doctor_app/components/DoctorSummary.vue';
+import DoctorReport from '@/apps/doctor_app/components/DoctorReport.vue';
+import DoctorQuestionnaireImport from '@/apps/doctor_app/components/DoctorQuestionnaireImport.vue';
 
-// 定义并导出医生端的所有路由
+// 路由配置部分完全不变！
 const doctorRoutes = [
   {
-    path: '/doctor',
-    name: 'DoctorHome',
-    component: DoctorView
+    path: '/doctor/login',
+    name: 'DoctorLogin',
+    component: DoctorLogin,
   },
-  // C同学未来可以在这里继续添加新的医生端路由
-  // 例如：
-  // {
-  //   path: '/doctor/dashboard',
-  //   name: 'DoctorDashboard',
-  //   component: () => import('../apps/doctor_app/DashboardPage.vue')
-  // }
+  {
+    path: '/doctor',
+    name: 'DoctorView',
+    component: DoctorView,
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/doctor/queue',
+    name: 'DoctorQueue',
+    component: DoctorQueue,
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/doctor/summary/:record_id',
+    name: 'DoctorSummary',
+    component: DoctorSummary,
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/doctor/report/:record_id',
+    name: 'DoctorReport',
+    component: DoctorReport,
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/doctor/questionnaire/import',
+    name: 'DoctorQuestionnaireImport',
+    component: DoctorQuestionnaireImport,
+    meta: { requiresAuth: true }
+  },
 ];
 
 export default doctorRoutes;
