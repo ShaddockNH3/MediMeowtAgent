@@ -116,10 +116,12 @@ class MedicalAIService(pb2_grpc.MedicalAIServiceServicer):
             print(f"🔍 异常类型: {type(e).__name__}")
             import traceback
             print(f"🔍 堆栈跟踪:\n{traceback.format_exc()}")
+            # 截取错误消息的前200个字符，避免消息过长
+            short_error_msg = str(e)[:200] + "..." if len(str(e)) > 200 else str(e)
             error_response = pb2.AnalysisReport(
                 structured_report="",
                 status="INTERNAL_ERROR",
-                message=error_msg
+                message=f"AI分析失败: {short_error_msg}"
             )
             yield pb2.StreamChunk(
                 chunk_data=error_response.SerializeToString(),

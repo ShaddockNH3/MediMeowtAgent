@@ -29,7 +29,7 @@ def check_dependencies():
         import fastapi
         import sqlalchemy
         import pymysql
-        import jose
+        import jwt
         import passlib
         return True
     except ImportError as e:
@@ -108,13 +108,14 @@ def start_server(dev_mode=True):
             ])
     except Exception as e:
         return False
-    
+
     return True
 
 def main():
     os.chdir(Path(__file__).parent)
     checks = [check_python_version, check_dependencies, check_env_file]
-    
+    # checks = [check_python_version, check_env_file] 如果使用python 3.13.1，pillow包有问题，可先注释掉依赖检查
+
     for check_func in checks:
         if not check_func():
             sys.exit(1)
