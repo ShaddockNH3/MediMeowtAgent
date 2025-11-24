@@ -8,7 +8,7 @@ class Settings(BaseSettings):
     
     # 数据库配置 (MariaDB)
     DATABASE_URL: str = Field(
-        default="mysql+pymysql://root:12345@localhost:3306/medimoew_db",
+        default="mysql+pymysql://root:12345@localhost:3306/medimeow_db",
         description="MariaDB 数据库连接URL"
     )
     
@@ -32,7 +32,17 @@ class Settings(BaseSettings):
         default="http://localhost:3000,http://localhost:5173",
         description="允许的跨域源"
     )
-    
+
+    # AI服务配置
+    GLM_API_KEY: str = Field(
+        default="8eb3feaa749d4797afee7a3eeca9ecc8.sStyqRnz3SLVVxyk",
+        description="GLM API密钥"
+    )
+    AI_SERVICE_HOST: str = Field(
+        default="127.0.0.1:50051",
+        description="AI服务主机地址"
+    )
+
     class Config:
         env_file = ".env"
         case_sensitive = True

@@ -4,10 +4,10 @@ services:
   # MySQL 数据库
   db:
     image: mysql:8.0
-    container_name: medimoew_db
+    container_name: medimeow_db
     restart: always
     environment:
-      MYSQL_DATABASE: medimoew_db
+      MYSQL_DATABASE: medimeow_db
       MYSQL_USER: medimoew_user
       MYSQL_PASSWORD: ${DB_PASSWORD:-medimoew_password}
       MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-root_password}
@@ -33,7 +33,7 @@ services:
     container_name: medimoew_backend
     restart: always
     environment:
-      DATABASE_URL: mysql+pymysql://medimoew_user:${DB_PASSWORD:-medimoew_password}@db:3306/medimoew_db
+      DATABASE_URL: mysql+pymysql://medimoew_user:${DB_PASSWORD:-medimoew_password}@db:3306/medimeow_db
       SECRET_KEY: ${SECRET_KEY:-your-secret-key-change-in-production}
       ALGORITHM: HS256
       ACCESS_TOKEN_EXPIRE_MINUTES: 30

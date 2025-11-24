@@ -398,18 +398,26 @@ async def submit_questionnaire(
 
     # 调用AI服务进行分析
     try:
+        # 构建完整的问卷数据用于AI分析
+        questionnaire_data = {
+            'questionnaire_id': questionnaire_id,
+            'user_id': current_user["user_id"],
+            'department_id': department_id,
+            'answers': answers
+        }
+
         ai_result = await AIService.analyze_questionnaire(
-            questionnaire_data=answers,
-            file_ids=file_id,
-            department_id=department_id,
-            db=db
+            questionnaire_data=questionnaire_data,
+            file_ids=file_id
         )
-        # 保存 key_info 部分（符合数据库结构）
-        submission.ai_result = ai_result.get("key_info", ai_result)
+        # 保存完整AI分析结果
+        submission.ai_result = ai_result
         submission.status = "completed"
         db.commit()
     except Exception as e:
         print(f"AI分析失败: {str(e)}")
+        import traceback
+        traceback.print_exc()
         # AI 失败不影响提交
 
     return success_response(
@@ -483,7 +491,7 @@ async def get_questionnaire_record(
     if submission:
         response_data["submission_id"] = submission.id
         if submission.ai_result:
-            response_data["is_department"] = submission.ai_result.get("is_department", True)
-            response_data["key_info"] = submission.ai_result.get("key_info", {})
+            # 返回完整AI分析结果
+            response_data.update(submission.ai_result)
     
     return success_response(data=response_data)

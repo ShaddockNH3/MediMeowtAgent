@@ -5,7 +5,7 @@
 
 DB_HOST=${DB_HOST:-127.0.0.1}
 DB_PORT=${DB_PORT:-3306}
-DB_NAME=${DB_NAME:-medimoew_db}
+DB_NAME=${DB_NAME:-medimeow_db}
 DB_USER=${DB_USER:-root}
 DB_PASS=${DB_PASS:-123456}
 

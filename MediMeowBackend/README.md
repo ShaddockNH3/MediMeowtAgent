@@ -113,7 +113,7 @@ uvicorn main:app --reload --host 0.0.0.0 --port 8000
 
 ```env
 # 数据库连接
-DATABASE_URL=mysql+pymysql://root:your_password@localhost:3306/medimoew_db
+DATABASE_URL=mysql+pymysql://root:your_password@localhost:3306/medimeow_db
 
 # JWT 密钥 (生产环境必须修改!)
 SECRET_KEY=your-secret-key-change-in-production
@@ -212,7 +212,7 @@ alembic upgrade head
 mysql -h127.0.0.1 -P3306 -uroot -p123456 -e "SELECT 1"
 
 # 检查数据库是否存在
-mysql -h127.0.0.1 -P3306 -uroot -p123456 -e "SHOW DATABASES LIKE 'medimoew_db'"
+mysql -h127.0.0.1 -P3306 -uroot -p123456 -e "SHOW DATABASES LIKE 'medimeow_db'"
 
 # 重置数据库
 ./reset_db.sh
