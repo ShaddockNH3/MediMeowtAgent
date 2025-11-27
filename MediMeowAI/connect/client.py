@@ -35,11 +35,11 @@ def get_real_request_data(stream_mode: bool, patient_dept: str):
     # 读取真实图片
     image_path = os.path.join(os.path.dirname(__file__), "pic", "tongue_sample.png")
     if not os.path.exists(image_path):
-        print(f"❌ 错误：图片文件不存在 {image_path}")
+        print(f"错误：图片文件不存在 {image_path}")
         raise FileNotFoundError(f"图片文件不存在: {image_path}")
     
     image_base64 = image_to_base64(image_path)
-    print(f"✅ 已加载图片：{image_path} (Base64长度: {len(image_base64)} 字符)")
+    print(f"已加载图片：{image_path} (Base64长度: {len(image_base64)} 字符)")
     
     return pb2.AnalysisRequest(
         patient_text_data=patient_text_data,
@@ -64,10 +64,10 @@ def sync_call(patient_dept: str):
                 sync_report = pb2.AnalysisReport.FromString(response_chunk.chunk_data)
                 if sync_report.status == "SUCCESS":
                     # 报告是UTF-8字符串，直接打印
-                    print("✅ 同步调用成功，完整报告：")
+                    print("同步调用成功，完整报告：")
                     print(sync_report.structured_report)
                 else:
-                    print(f"❌ 同步调用失败")
+                    print(f"同步调用失败")
                     print(f"   状态: {sync_report.status}")
                     print(f"   消息: {sync_report.message}")
                     if sync_report.structured_report:
@@ -84,12 +84,12 @@ def stream_call(patient_dept: str):
         request = get_real_request_data(stream_mode=True, patient_dept=patient_dept)
         response_iterator = stub.ProcessMedicalAnalysis(request)
         
-        print("📥 开始接收流式数据：")
+        print("开始接收流式数据：")
         for response_chunk in response_iterator:
             # 流式：bytes→UTF-8字符串
             chunk_str = response_chunk.chunk_data.decode('utf-8')
             if chunk_str == "[STREAM_END]":
-                print("\n📥 流式接收完毕（收到结束标记）")
+                print("\n流式接收完毕（收到结束标记）")
                 break
             print(f"[流式chunk] {chunk_str}", end="")
             if not response_chunk.is_end:
@@ -97,7 +97,7 @@ def stream_call(patient_dept: str):
 
 if __name__ == "__main__":
     print("\n" + "="*80)
-    print("🌟 医疗AI服务 gRPC 客户端测试（使用真实数据）")
+    print("医疗AI服务 gRPC 客户端测试（使用真实数据）")
     print("="*80)
     
     # 测试 1: 同步调用 + 正确科室
@@ -113,5 +113,5 @@ if __name__ == "__main__":
     # stream_call(patient_dept="内科")
     
     print("\n" + "="*80)
-    print("✅ 测试完成")
+    print("测试完成")
     print("="*80)

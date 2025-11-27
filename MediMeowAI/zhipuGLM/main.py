@@ -29,7 +29,7 @@ def run_three_stage_rag(patient_text_data: str, image_path: str, vector_store):
     # ----------------------------------------------------
     # 阶段 1: 多模态生成初步纯文本描述
     # ----------------------------------------------------
-    print("\n--- 🧠 阶段 1: 正在使用 GLM-4 生成纯文本描述块... ---")
+    print("\n--- 阶段 1: 正在使用 GLM-4 生成纯文本描述块... ---")
     messages_stage1 = [
         SystemMessage(content="你是一位专业、客观的医疗助手，严格按照提供的格式输出。"),
         HumanMessage(
@@ -41,29 +41,29 @@ def run_three_stage_rag(patient_text_data: str, image_path: str, vector_store):
     ]
     stage1_response = llm.invoke(messages_stage1)
     multimodal_description_block = stage1_response.content
-    print("--- ✅ 阶段 1: 纯文本描述块生成成功！ ---")
+    print("--- 阶段 1: 纯文本描述块生成成功！ ---")
     
     # ----------------------------------------------------
     # 阶段 2: RAG 检索
     # ----------------------------------------------------
-    print("\n--- 🧠 阶段 2: RAG 检索中... ---")
+    print("\n--- 阶段 2: RAG 检索中... ---")
     
     # 2.1 提取关键词
     keyword_prompt = ChatPromptTemplate.from_template(prompts.RAG_RETRIEVAL_PROMPT)
     keyword_chain = keyword_prompt | llm | (lambda x: x.content) # 使用 lambda 访问 .content
     retrieval_keywords = keyword_chain.invoke({"report_fragment": multimodal_description_block})
-    print(f"--- 🔑 检索关键词: {retrieval_keywords} ---")
+    print(f"--- 检索关键词: {retrieval_keywords} ---")
 
     # 2.2 执行检索
     retriever = vector_store.as_retriever(search_kwargs={"k": 5})
     retrieved_docs: List[Document] = retriever.invoke(retrieval_keywords) 
     retrieved_context = "\n---\n".join([doc.page_content for doc in retrieved_docs])
-    print(f"--- ✅ 阶段 2: 检索到 {len(retrieved_docs)} 个知识片段 ---")
+    print(f"--- 阶段 2: 检索到 {len(retrieved_docs)} 个知识片段 ---")
     
     # ----------------------------------------------------
     # 阶段 3: 整合生成最终病历
     # ----------------------------------------------------
-    print("\n--- 🧠 阶段 3: 整合信息，生成最终病历... ---")
+    print("\n--- 阶段 3: 整合信息，生成最终病历... ---")
     
     final_prompt = ChatPromptTemplate.from_template(prompts.FINAL_REPORT_PROMPT)
     final_chain = final_prompt | llm | (lambda x: x.content)
@@ -78,7 +78,7 @@ def run_three_stage_rag(patient_text_data: str, image_path: str, vector_store):
 
 if __name__ == "__main__":
     print("\n" + "="*80)
-    print("🌟 启动医疗 RAG 辅助系统 🌟")
+    print("启动医疗 RAG 辅助系统")
     print("="*80)
 
     # 模拟输入数据
@@ -101,7 +101,7 @@ if __name__ == "__main__":
     
     # 检查图片
     if not os.path.exists(config.DEFAULT_IMAGE_PATH):
-        print(f"\n--- ❌ 错误：请将您的测试图片命名为 {config.DEFAULT_IMAGE_PATH} 放入当前目录 ---")
+        print(f"\n--- 错误：请将您的测试图片命名为 {config.DEFAULT_IMAGE_PATH} 放入当前目录 ---")
         exit()
     
     # 构建/加载数据库
@@ -116,7 +116,7 @@ if __name__ == "__main__":
         )
         
         print("\n" + "="*80)
-        print("🎉 【最终结构化病历】 🎉")
+        print("【最终结构化病历】")
         print("="*80)
         print(final_result)
         print("="*80)

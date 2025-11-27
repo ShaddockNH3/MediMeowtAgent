@@ -11,16 +11,16 @@ def build_or_load_rag_index():
     
     # 1. 尝试加载现有数据库
     if os.path.exists(config.CHROMA_PERSIST_DIR):
-        print("--- 💡 正在加载现有 Chroma 数据库... ---")
+        print("--- 正在加载现有 Chroma 数据库... ---")
         return Chroma(persist_directory=config.CHROMA_PERSIST_DIR, embedding_function=bge_embeddings)
 
     # 2. 检查文档目录
     if not os.path.exists(config.DOCS_DIRECTORY):
-        print(f"--- ⚠️ 错误：请创建 {config.DOCS_DIRECTORY} 文件夹，并放入您的医疗TXT文件 ---")
+        print(f"--- 错误：请创建 {config.DOCS_DIRECTORY} 文件夹，并放入您的医疗TXT文件 ---")
         return None
     
     # 3. 构建新数据库
-    print("--- 🐾 正在加载文档并构建向量数据库... ---")
+    print("--- 正在加载文档并构建向量数据库... ---")
     loader = DirectoryLoader(
         config.DOCS_DIRECTORY, 
         glob="**/*.txt", 
@@ -39,5 +39,5 @@ def build_or_load_rag_index():
         embedding=bge_embeddings, 
         persist_directory=config.CHROMA_PERSIST_DIR
     )
-    print(f"--- 💖 数据库构建完成！文档块数量: {len(chunks)} ---")
+    print(f"--- 数据库构建完成！文档块数量: {len(chunks)} ---")
     return vectorstore

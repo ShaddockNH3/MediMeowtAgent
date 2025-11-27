@@ -82,7 +82,7 @@ async def import_questionnaire(
 
             # 验证问题标题：如果为空或为'nan'，跳过并记录警告
             if not question_text or question_text.lower() == 'nan':
-                print(f"⚠️ 跳过无效问题标题: '{question_text}', 题号: {question_id}")
+                print(f"跳过无效问题标题: '{question_text}', 题号: {question_id}")
                 continue
 
             # 构建问题对象
@@ -124,7 +124,7 @@ async def import_questionnaire(
                     question_obj["placeholder"] = options_str
             else:
                 # 未知类型，跳过或记录警告
-                print(f"⚠️ 未知题目类型: {question_type}, 题号: {question_id}")
+                print(f"未知题目类型: {question_type}, 题号: {question_id}")
                 continue
             
             questions.append(question_obj)
@@ -165,7 +165,7 @@ async def import_questionnaire(
         db.commit()
         db.refresh(new_questionnaire)
         
-        print(f"✅ 问卷导入成功 - ID: {new_questionnaire.id}, 版本: {new_version}, 问题数: {len(questions)}")
+        print(f"问卷导入成功 - ID: {new_questionnaire.id}, 版本: {new_version}, 问题数: {len(questions)}")
         
         return success_response(
             msg="问卷导入成功",
@@ -180,7 +180,7 @@ async def import_questionnaire(
     except pd.errors.EmptyDataError:
         return error_response(code="10014", msg="Excel文件为空")
     except Exception as e:
-        print(f"❌ 问卷导入失败: {str(e)}")
+        print(f"问卷导入失败: {str(e)}")
         import traceback
         traceback.print_exc()
         return error_response(code="10015", msg=f"问卷导入失败: {str(e)}")
@@ -274,7 +274,7 @@ async def get_questionnaire(
     db: Session = Depends(get_db)
 ):
     """获取问卷（根据科室ID）"""
-    print(f"📋 请求获取问卷 - 科室ID: {department_id}, 用户ID: {current_user['user_id']}")
+    print(f"请求获取问卷 - 科室ID: {department_id}, 用户ID: {current_user['user_id']}")
     
     # 查询该科室的激活问卷，优先返回 active 状态
     questionnaire = db.query(Questionnaire).filter(
@@ -290,39 +290,14 @@ async def get_questionnaire(
         ).first()
 
         if not department:
-            print(f"❌ 科室不存在: {department_id}")
+            print(f"科室不存在: {department_id}")
             return error_response(code="10006", msg=f"科室不存在 (ID: {department_id})")
 
-        # 检查是否为耳鼻喉科，如果是则使用markdown数据作为fallback
-        if department.department_name == "耳鼻喉科":
-            try:
-                print(f"📋 使用耳鼻喉科markdown数据作为fallback")
-                fallback_questions = parse_ent_questionnaire_from_md()
-
-                # 构造临时问卷数据结构
-                class FallbackQuestionnaire:
-                    def __init__(self, qid, title, questions):
-                        self.id = qid
-                        self.title = title
-                        self.questions = questions
-
-                questionnaire = FallbackQuestionnaire(
-                    qid=f"fallback_{department_id}",
-                    title="耳鼻喉科问卷",
-                    questions=fallback_questions
-                )
-
-                print(f"✅ 成功加载耳鼻喉科fallback问卷，问题数: {len(fallback_questions)}")
-
-            except Exception as e:
-                print(f"❌ 加载耳鼻喉科fallback问卷失败: {str(e)}")
-                return error_response(code="10006", msg=f"该科室({department.department_name})暂无可用问卷，且fallback加载失败")
-        else:
-            # 科室存在但没有问卷，且不是耳鼻喉科
-            print(f"❌ 科室 '{department.department_name}' 暂无可用问卷")
-            return error_response(code="10006", msg=f"该科室({department.department_name})暂无可用问卷")
+        # 科室存在但没有问卷
+        print(f"科室 '{department.department_name}' 暂无可用问卷")
+        return error_response(code="10006", msg=f"该科室({department.department_name})暂无可用问卷")
     
-    print(f"✅ 找到问卷: {questionnaire.title} (ID: {questionnaire.id})")
+    print(f"找到问卷: {questionnaire.title} (ID: {questionnaire.id})")
     
     # 查询用户已保存的答案
     saved_submission = db.query(QuestionnaireSubmission).filter(
@@ -561,64 +536,5 @@ async def get_questionnaire_record(
             response_data.update(submission.ai_result)
 
     return success_response(data=response_data)
-
-# 临时问卷数据导入功能
-def parse_ent_questionnaire_from_md():
-    """从耳鼻喉科.md文件中解析问题数据，生成正确的问卷数据结构"""
-    import os
-    import re
-
-    # 构建文件路径
-    md_file_path = os.path.join(os.path.dirname(__file__), "..", "..", "..", "docs", "questionnaire", "耳鼻喉科.md")
-
-    if not os.path.exists(md_file_path):
-        raise FileNotFoundError(f"文件不存在: {md_file_path}")
-
-    with open(md_file_path, 'r', encoding='utf-8') as f:
-        content = f.read()
-
-    questions = []
-
-    # 查找专项问诊部分
-    ent_section_match = re.search(r'## 耳鼻喉科专项问诊(.*)$', content, re.DOTALL)
-    if not ent_section_match:
-        raise ValueError("未找到耳鼻喉科专项问诊部分")
-
-    ent_content = ent_section_match.group(0)
-
-    # 解析问题
-    question_pattern = r'(\d+)\. \*\*(.*?)\*\*：\s*\n((?:\s*- [A-D]\. .*\n)+)'
-    matches = re.findall(question_pattern, ent_content, re.MULTILINE)
-
-    for match in matches:
-        question_num, question_title, options_text = match
-
-        # 清理问题标题
-        question_title = question_title.strip()
-
-        # 解析选项
-        options = []
-        option_lines = options_text.strip().split('\n')
-        for line in option_lines:
-            line = line.strip()
-            if line.startswith('- '):
-                option_text = line[2:].strip()
-                # 只取第一个A-D.的部分，忽略后面的诊断说明
-                if '. ' in option_text:
-                    option = option_text.split('. ', 1)[1].split(' → ')[0].strip()
-                    options.append(option)
-
-        # 创建问题对象
-        question_obj = {
-            "id": f"Q{question_num}",
-            "question": question_title,
-            "type": "single",  # 单选题
-            "required": True,
-            "options": options
-        }
-
-        questions.append(question_obj)
-
-    return questions
 
 
