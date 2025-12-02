@@ -1,23 +1,62 @@
 <template>
-  <div class="queue-container">
-    <h3>待诊列表</h3>
-    <router-link to="/doctor" class="back-btn">返回医生主页</router-link>
-    
-    <div class="loading" v-if="loading">加载中...</div>
-    <div class="error" v-if="errorMsg">{{ errorMsg }}</div>
-    <ul class="queue-list" v-else>
-      <li v-for="recordId in recordIds" :key="recordId">
-        待诊患者 ID：{{ recordId }}
-        <router-link :to="`/doctor/summary/${recordId}`" class="view-btn">
-          查看病情摘要
-        </router-link>
-      </li>
-    </ul>
+  <div class="queue-page">
+    <!-- 页面头部（与其他页面统一） -->
+    <div class="page-header">
+      <h2 class="page-title">患者队列</h2>
+      <div class="doctor-info">
+        <span class="doctor-name">{{ doctorName }}</span> | 
+        <span class="department">{{ doctorDept }}</span>
+      </div>
+    </div>
+
+    <div class="content-wrapper">
+      <!-- 左侧侧边栏（匹配图片样式） -->
+      <aside class="sidebar">
+        <!-- 侧边栏标题（医生工作站） -->
+        <div class="sidebar-header">
+          <i class="icon icon-station">👨‍⚕️</i>
+          <span>医生工作站</span>
+        </div>
+        <!-- 菜单项 -->
+        <div class="sidebar-item active">
+          <i class="icon icon-queue">📋</i>
+          <span>患者队列</span>
+        </div>
+        <div class="sidebar-item" @click="goToDetail">
+          <i class="icon icon-detail">👤</i>
+          <span>患者详情</span>
+        </div>
+        <div class="sidebar-item" @click="goToRecord">
+          <i class="icon icon-record">📄</i>
+          <span>电子病历</span>
+        </div>
+        <div class="sidebar-item" @click="goToQuestionnaire">
+          <i class="icon icon-questionnaire">📊</i>
+          <span>问卷管理</span>
+        </div>
+      </aside>
+
+      <!-- 右侧队列内容区 -->
+      <main class="queue-content">
+        <div class="queue-container">
+          <div class="loading" v-if="loading">加载中...</div>
+          <div class="error" v-if="errorMsg">{{ errorMsg }}</div>
+          <ul class="queue-list" v-else>
+            <li v-for="recordId in recordIds" :key="recordId">
+              待诊患者 ID：{{ recordId }}
+              <router-link :to="`/doctor/summary/${recordId}`" class="view-btn">
+                查看病情摘要
+              </router-link>
+            </li>
+          </ul>
+        </div>
+      </main>
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, computed } from 'vue';
 import { useRouter } from 'vue-router';
 import { getDoctorQueue } from '../api/queue';
 import type { DoctorQueueResponse } from '../api/queue';
@@ -26,6 +65,19 @@ const router = useRouter();
 const loading = ref(false);
 const errorMsg = ref('');
 const recordIds = ref<string[]>([]);
+
+// 医生信息（与其他页面统一，从localStorage读取）
+const doctorInfo = computed(() => {
+  const info = localStorage.getItem('doctorInfo');
+  return info ? JSON.parse(info) : { username: '张医生', department: '呼吸内科' };
+});
+const doctorName = computed(() => doctorInfo.value.username);
+const doctorDept = computed(() => doctorInfo.value.department);
+
+/** 侧边栏跳转函数 */
+const goToDetail = () => router.push('/doctor/summary');
+const goToRecord = () => router.push('/doctor/record');
+const goToQuestionnaire = () => router.push('/doctor/questionnaire');
 
 onMounted(() => {
   fetchQueue();
@@ -57,46 +109,104 @@ const fetchQueue = async () => {
 </script>
 
 <style scoped>
-/* 新增：与医生主页一致的背景渐变，增强页面风格统一性 */
+/* 页面整体样式（与其他页面统一） */
+.queue-page {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background-color: #f5f7fa;
+  min-height: 100vh;
+}
+
+/* 页面头部（与其他页面统一） */
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 24px;
+  background-color: #fff;
+  border-bottom: 1px solid #e5e9f2;
+}
+
+.page-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: #1d2129;
+  margin: 0;
+}
+
+.doctor-info {
+  font-size: 14px;
+  color: #86909c;
+}
+
+/* 内容容器（侧边栏+主内容区） */
+.content-wrapper {
+  display: flex;
+}
+
+/* 左侧侧边栏（匹配图片样式） */
+.sidebar {
+  width: 180px;
+  background-color: #0F2E57; /* 图片同款深蓝色背景 */
+  color: #fff;
+  padding: 0;
+  box-shadow: 2px 0 8px rgba(0,0,0,0.1);
+}
+
+/* 侧边栏标题（医生工作站） */
+.sidebar-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 16px 20px;
+  font-size: 16px;
+  font-weight: 600;
+  border-bottom: 1px solid rgba(255,255,255,0.1);
+}
+
+/* 侧边栏菜单项 */
+.sidebar-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 20px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+/* 选中项高亮（患者队列） */
+.sidebar-item.active {
+  background-color: #1A4B8C; /* 选中项亮蓝色背景 */
+}
+
+.sidebar-item:hover:not(.active) {
+  background-color: #153A69;
+}
+
+/* 侧边栏图标 */
+.icon {
+  font-size: 18px;
+  width: 20px; /* 固定图标宽度，文字对齐 */
+  text-align: center;
+}
+
+/* 右侧队列内容区 */
+.queue-content {
+  flex: 1;
+  padding: 24px;
+}
+
+/* 队列容器样式 */
 .queue-container {
   max-width: 800px;
-  margin: 30px auto;
+  margin: 0 auto;
   padding: 24px;
-  background: linear-gradient(135deg, #f5fafe 0%, #eaf6fa 100%); /* 与医生主页背景一致 */
+  background: linear-gradient(135deg, #f5fafe 0%, #eaf6fa 100%);
   border-radius: 12px;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 }
 
-/* 标题样式增强 */
-.queue-container h3 {
-  font-size: 22px;
-  color: #333;
-  margin: 0 0 24px;
-  padding-bottom: 12px;
-  border-bottom: 1px solid #eee;
-}
-
-/* 返回按钮样式优化 */
-.back-btn {
-  display: inline-block;
-  margin-bottom: 20px;
-  padding: 8px 16px;
-  background-color: #67c23a;
-  color: #fff;
-  border-radius: 6px;
-  text-decoration: none;
-  font-size: 14px;
-  transition: all 0.3s ease;
-}
-
-.back-btn:hover {
-  background-color: #5daf34;
-  transform: translateY(-2px);
-  box-shadow: 0 2px 8px rgba(103, 194, 58, 0.3);
-}
-
-/* 加载状态样式优化 */
+/* 加载状态样式 */
 .loading {
   text-align: center;
   padding: 60px;
@@ -106,7 +216,7 @@ const fetchQueue = async () => {
   border-radius: 8px;
 }
 
-/* 错误提示样式优化 */
+/* 错误提示样式 */
 .error {
   text-align: center;
   padding: 24px;
@@ -148,7 +258,7 @@ const fetchQueue = async () => {
   margin-bottom: 0;
 }
 
-/* 查看按钮样式优化 */
+/* 查看按钮样式 */
 .view-btn {
   padding: 8px 16px;
   background-color: #409eff;
@@ -163,5 +273,25 @@ const fetchQueue = async () => {
   background-color: #3086d6;
   transform: translateY(-1px);
   box-shadow: 0 2px 8px rgba(64, 158, 255, 0.3);
+}
+
+/* 响应式适配 */
+@media (max-width: 768px) {
+  .content-wrapper {
+    flex-direction: column;
+  }
+  .sidebar {
+    width: 100%;
+    display: flex;
+    flex-wrap: wrap;
+  }
+  .sidebar-header {
+    width: 100%;
+  }
+  .sidebar-item {
+    flex: 1;
+    justify-content: center;
+    padding: 12px 8px;
+  }
 }
 </style>

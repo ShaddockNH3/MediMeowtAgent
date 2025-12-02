@@ -1,500 +1,542 @@
 <template>
-  <div class="diagnosis-report">
-    <div class="header">
-      <h2>提交诊断结果</h2>
-      <button @click="goBack" class="back-btn">
-        <span class="btn-icon">←</span> 返回病情摘要
-      </button>
-    </div>
-
-    <!-- 加载状态（含错误提示） -->
-    <div v-if="loading" class="loading">
-      <div class="loading-icon">🔄</div>
-      <div v-if="errorMsg" class="error">{{ errorMsg }}</div>
-      <div v-else>提交中...</div>
-    </div>
-
-    <!-- 表单区域（加载状态隐藏） -->
-    <div v-else class="form-container">
-      <!-- 错误提示 -->
-      <div v-if="errorMsg" class="error-alert">
-        <div class="error-alert-icon">⚠️</div>
-        <p>{{ errorMsg }}</p>
+  <div class="medical-record-page">
+    <!-- 页面头部 -->
+    <div class="page-header">
+      <h2 class="page-title">电子病历生成</h2>
+      <div class="doctor-info">
+        <span class="doctor-name">{{ doctorName }}</span> | 
+        <span class="department">{{ doctorDept }}</span>
       </div>
+    </div>
 
-      <!-- 诊断内容表单 -->
-      <form @submit.prevent="handleSubmit" class="report-form">
-        <div class="form-item">
-          <label class="form-label">待诊记录ID：</label>
-          <span class="record-id">
-            <span class="id-icon">🆔</span>
-            {{ recordId || '暂无' }}
-          </span> <!-- 展示当前记录ID，不可编辑 -->
+    <div class="content-wrapper">
+      <!-- 左侧侧边栏（匹配图片样式） -->
+      <aside class="sidebar">
+        <!-- 侧边栏标题（医生工作站） -->
+        <div class="sidebar-header">
+          <i class="icon icon-station">👨‍⚕️</i>
+          <span>医生工作站</span>
         </div>
-        <div class="form-item required-item">
-          <label class="form-label">
-            诊断内容
-            <span class="required-mark">*</span>
-          </label>
-          <textarea
-            v-model="diagnosisText"
-            class="form-textarea"
-            placeholder="请输入详细诊断结果（如：1. 诊断结论：上呼吸道感染；2. 治疗建议：居家休息，口服阿莫西林胶囊，每日3次，每次1粒；3. 复诊提醒：3天后复诊，如症状加重请及时就医）"
-            rows="8"
-            :disabled="submitting"
-            @input="clearFormError"
-          ></textarea>
-          <div v-if="formError.text" class="form-error">
-            <span class="error-icon">❌</span>
-            {{ formError.text }}
+        <!-- 菜单项 -->
+        <div class="sidebar-item" @click="goToQueue">
+          <i class="icon icon-queue">📋</i>
+          <span>患者队列</span>
+        </div>
+        <div class="sidebar-item" @click="goToDetail">
+          <i class="icon icon-detail">👤</i>
+          <span>患者详情</span>
+        </div>
+        <div class="sidebar-item active">
+          <i class="icon icon-record">📄</i>
+          <span>电子病历</span>
+        </div>
+        <div class="sidebar-item" @click="goToQuestionnaire">
+          <i class="icon icon-questionnaire">📊</i>
+          <span>问卷管理</span>
+        </div>
+      </aside>
+
+      <!-- 右侧病历内容区 -->
+      <main class="record-content">
+        <!-- 加载/错误状态 -->
+        <div v-if="loading" class="loading-state">
+          <span class="loading-spinner">🔄</span>
+          <p v-if="errorMsg">{{ errorMsg }}</p>
+          <p v-else>加载中...</p>
+        </div>
+
+        <!-- 病历表单 -->
+        <div v-else class="record-form">
+          <!-- 患者信息 -->
+          <div class="patient-info">
+            <span class="label">待诊记录ID：</span>
+            <span class="value">{{ recordId }}</span>
           </div>
-          <div class="textarea-hint">
-            提示：请包含诊断结论、治疗建议、复诊要求等关键信息，至少5个字符
-          </div>
+          <p class="hint-text">请完善以下病历信息：</p>
+
+          <!-- 表单模块 -->
+          <form @submit.prevent="handleSubmit" class="form-modules">
+            <!-- 1. 主诉 -->
+            <div class="form-module">
+              <label class="module-label">主诉</label>
+              <textarea
+                v-model="formData.chiefComplaint"
+                class="module-textarea"
+                :disabled="submitting"
+                placeholder="如：发热3天，伴咳嗽、咽痛"
+              ></textarea>
+            </div>
+
+            <!-- 2. 现病史 -->
+            <div class="form-module">
+              <label class="module-label">现病史</label>
+              <textarea
+                v-model="formData.presentIllness"
+                class="module-textarea"
+                :disabled="submitting"
+                placeholder="详细描述发病过程、症状变化等"
+                rows="3"
+              ></textarea>
+            </div>
+
+            <!-- 3. 既往史 -->
+            <div class="form-module">
+              <label class="module-label">既往史</label>
+              <textarea
+                v-model="formData.pastIllness"
+                class="module-textarea"
+                :disabled="submitting"
+                placeholder="如：既往体健，无高血压、糖尿病史"
+              ></textarea>
+            </div>
+
+            <!-- 4. 体格检查 -->
+            <div class="form-module">
+              <label class="module-label">体格检查</label>
+              <textarea
+                v-model="formData.physicalExam"
+                class="module-textarea"
+                :disabled="submitting"
+                placeholder="如：体温38.5℃，咽部充血，扁桃体Ⅰ度肿大"
+              ></textarea>
+            </div>
+
+            <!-- 5. 辅助检查 -->
+            <div class="form-module">
+              <label class="module-label">辅助检查</label>
+              <textarea
+                v-model="formData.auxiliaryExam"
+                class="module-textarea"
+                :disabled="submitting"
+                placeholder="如：血常规：WBC 12.0×10⁹/L，中性粒细胞80%"
+              ></textarea>
+            </div>
+
+            <!-- 6. 初步诊断（必填） -->
+            <div class="form-module required">
+              <label class="module-label">
+                初步诊断
+                <span class="required-mark">*</span>
+              </label>
+              <textarea
+                v-model="formData.initialDiagnosis"
+                class="module-textarea"
+                :disabled="submitting"
+                placeholder="如：急性上呼吸道感染"
+              ></textarea>
+              <div v-if="formError.initialDiagnosis" class="error-tip">
+                {{ formError.initialDiagnosis }}
+              </div>
+            </div>
+
+            <!-- 7. 处理意见（必填） -->
+            <div class="form-module required">
+              <label class="module-label">
+                处理意见
+                <span class="required-mark">*</span>
+              </label>
+              <textarea
+                v-model="formData.treatmentAdvice"
+                class="module-textarea"
+                :disabled="submitting"
+                placeholder="如：1. 布洛芬缓释胶囊 0.3g 口服 bid；2. 多饮水，休息；3. 3天后复诊"
+                rows="3"
+              ></textarea>
+              <div v-if="formError.treatmentAdvice" class="error-tip">
+                {{ formError.treatmentAdvice }}
+              </div>
+            </div>
+
+            <!-- 操作按钮 -->
+            <div class="btn-group">
+              <button type="button" class="back-btn" @click="goBack" :disabled="submitting">
+                返回详情
+              </button>
+              <button type="submit" class="submit-btn" :disabled="submitting">
+                <span v-if="submitting" class="loading-icon">🔄</span>
+                提交病历
+              </button>
+            </div>
+          </form>
         </div>
-        <div class="form-actions">
-          <button type="submit" class="submit-btn" :disabled="submitting">
-            <span class="btn-icon" v-if="submitting">🔄</span>
-            {{ submitting ? '提交中...' : '提交诊断结果' }}
-          </button>
-        </div>
-      </form>
+      </main>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, computed } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { submitDiagnosisReport } from '../api/report';
-import type { SubmitReportParams, SubmitReportResponse } from '../api/report'; // 导入嵌套响应类型
+import type { SubmitReportParams, SubmitReportResponse } from '../api/report';
 
-// 路由实例（获取参数+跳转）
 const route = useRoute();
 const router = useRouter();
 
-// 响应式变量：调整loading初始值为true，确保页面加载时先进入加载状态
-const loading = ref(true); // 整体加载状态（含无record_id的初始检查）
-const submitting = ref(false); // 提交按钮加载状态
-const errorMsg = ref(''); // 全局错误提示（如无record_id、登录失效）
-const formError = ref({ text: '' }); // 表单字段校验错误
+// 响应式状态
+const loading = ref(true);
+const submitting = ref(false);
+const errorMsg = ref('');
+const formError = ref({ initialDiagnosis: '', treatmentAdvice: '' });
 
-// 表单数据：与SubmitReportParams参数类型对齐
-const recordId = ref(''); // 待诊记录ID（从路由参数获取，必填）
-const diagnosisText = ref(''); // 诊断内容（必填）
+// 医生信息
+const doctorInfo = computed(() => {
+  const info = localStorage.getItem('doctorInfo');
+  return info ? JSON.parse(info) : { username: '张医生', department: '呼吸内科' };
+});
+const doctorName = computed(() => doctorInfo.value.username);
+const doctorDept = computed(() => doctorInfo.value.department);
 
-/**
- * 返回上一页（病情摘要页面）
- */
+// 病历表单数据
+const formData = ref({
+  chiefComplaint: '',    // 主诉
+  presentIllness: '',    // 现病史
+  pastIllness: '',       // 既往史
+  physicalExam: '',      // 体格检查
+  auxiliaryExam: '',     // 辅助检查
+  initialDiagnosis: '',  // 初步诊断（必填）
+  treatmentAdvice: ''    // 处理意见（必填）
+});
+
+// 待诊记录ID
+const recordId = ref('');
+
+/** 侧边栏跳转函数 */
+const goToQueue = () => router.push('/doctor/queue');
+const goToDetail = () => router.push('/doctor/summary');
+const goToQuestionnaire = () => router.push('/doctor/questionnaire');
+
+/** 返回患者详情页 */
 const goBack = () => {
   router.push(`/doctor/summary/${recordId.value}`);
 };
 
-/**
- * 清除表单校验错误
- */
-const clearFormError = () => {
-  formError.value.text = '';
-};
-
-/**
- * 表单校验：验证诊断内容必填且长度合规
- */
+/** 表单校验 */
 const validateForm = (): boolean => {
-  formError.value = { text: '' };
+  formError.value = { initialDiagnosis: '', treatmentAdvice: '' };
   let isValid = true;
-
-  // 校验诊断内容不为空
-  if (!diagnosisText.value.trim()) {
-    formError.value.text = '请输入诊断内容';
+  if (!formData.value.initialDiagnosis.trim()) {
+    formError.value.initialDiagnosis = '请填写初步诊断';
     isValid = false;
   }
-  // 校验诊断内容长度（至少5个字符，避免无效内容）
-  else if (diagnosisText.value.trim().length < 5) {
-    formError.value.text = '诊断内容至少5个字符';
+  if (!formData.value.treatmentAdvice.trim()) {
+    formError.value.treatmentAdvice = '请填写处理意见';
     isValid = false;
   }
-
   return isValid;
 };
 
-/**
- * 提交诊断结果：校验→调用API→处理结果
- */
+/** 提交病历 */
 const handleSubmit = async () => {
-  // 1. 先做表单前端校验
   if (!validateForm()) return;
-
-  // 2. 组装提交参数（严格匹配SubmitReportParams类型）
-  const submitParams: SubmitReportParams = {
-    record_id: recordId.value,
-    text: diagnosisText.value.trim()
-  };
+  if (submitting.value) return;
 
   try {
     submitting.value = true;
     errorMsg.value = '';
 
-    // 3. 调用API提交（响应为嵌套结构：base + ...）
-    const res = await submitDiagnosisReport(submitParams);
+    const diagnosisText = `
+【主诉】${formData.value.chiefComplaint || '无'}
 
-    // 4. 处理接口返回结果：适配嵌套结构的base层级
+【现病史】${formData.value.presentIllness || '无'}
+
+【既往史】${formData.value.pastIllness || '无'}
+
+【体格检查】${formData.value.physicalExam || '无'}
+
+【辅助检查】${formData.value.auxiliaryExam || '无'}
+
+【初步诊断】${formData.value.initialDiagnosis}
+
+【处理意见】${formData.value.treatmentAdvice}
+    `.trim();
+
+    const submitParams: SubmitReportParams = {
+      record_id: recordId.value,
+      text: diagnosisText
+    };
+
+    const res: SubmitReportResponse = await submitDiagnosisReport(submitParams);
     if (res.base.code === '10000') {
-      alert('诊断结果提交成功！' + res.base.msg);
-      // 提交成功后跳转回待诊列表
+      alert('病历提交成功！');
       router.push('/doctor/queue');
     } else {
-      // 接口返回失败（如参数错误、后端异常）
-      errorMsg.value = res.base.msg || '提交诊断结果失败，请重试';
+      errorMsg.value = res.base.msg || '提交失败，请重试';
     }
-  } catch (error: any) {
-    // 捕获网络异常（如后端未启动、跨域问题）
-    errorMsg.value = error.base?.msg || '网络异常，请稍后重试';
-    console.error('提交诊断结果失败：', error);
+  } catch (err: any) {
+    errorMsg.value = err.message || '网络异常，请稍后重试';
   } finally {
     submitting.value = false;
   }
 };
 
-/**
- * 页面挂载时：获取路由参数+验证登录状态
- */
+/** 页面挂载 */
 onMounted(() => {
   try {
-    // 1. 从路由参数中获取record_id（必填）
     const id = route.params.record_id as string;
-    if (!id) {
-      errorMsg.value = '缺少待诊记录ID，无法提交诊断结果';
-      // 1.5秒后自动跳转回待诊列表，并终止加载状态以显示错误提示
-      setTimeout(() => {
-        router.push('/doctor/queue');
-        loading.value = false;
-      }, 1500);
-      return;
-    }
+    if (!id) throw new Error('缺少待诊记录ID');
     recordId.value = id;
 
-    // 2. 验证登录状态（未登录则跳回登录页）
     const token = localStorage.getItem('doctorToken');
-    if (!token) {
-      errorMsg.value = '未登录，请重新登录';
-      setTimeout(() => {
-        router.push('/doctor/login');
-        loading.value = false;
-      }, 1500);
-      return;
-    }
+    if (!token) throw new Error('未登录，请重新登录');
 
-    // 3. 加载完成，显示表单
     loading.value = false;
-  } catch (error) {
-    errorMsg.value = '页面加载失败，请稍后重试';
-    setTimeout(() => {
-      router.push('/doctor/queue');
-      loading.value = false;
-    }, 1500);
+  } catch (err: any) {
+    errorMsg.value = err.message || '页面加载失败';
+    setTimeout(() => router.push('/doctor/queue'), 1500);
   }
 });
 </script>
 
 <style scoped>
-/* 统一背景渐变，与其他页面风格保持一致 */
-.diagnosis-report {
-  padding: 40px 24px;
-  max-width: 1200px;
-  margin: 0 auto;
+/* 页面整体样式 */
+.medical-record-page {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  background: linear-gradient(135deg, #f5fafe 0%, #eaf6fa 100%);
-  min-height: calc(100vh - 80px);
+  background-color: #f5f7fa;
+  min-height: 100vh;
 }
 
-/* 头部样式优化 */
-.header {
+/* 头部样式 */
+.page-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 32px;
+  padding: 16px 24px;
+  background-color: #fff;
+  border-bottom: 1px solid #e5e9f2;
 }
 
-.header h2 {
-  font-size: 26px;
-  color: #1e293b;
+.page-title {
+  font-size: 18px;
   font-weight: 600;
+  color: #1d2129;
   margin: 0;
-  position: relative;
 }
 
-/* 标题下划线装饰 */
-.header h2::after {
-  content: '';
-  display: block;
-  width: 70px;
-  height: 3px;
-  background-color: #3b82f6;
-  margin-top: 8px;
-  border-radius: 2px;
-}
-
-/* 返回按钮样式优化（与其他页面统一绿色系） */
-.back-btn {
-  padding: 9px 18px;
-  background-color: #67c23a;
-  color: #fff;
-  border: none;
-  border-radius: 8px;
-  cursor: pointer;
-  transition: all 0.3s ease;
+.doctor-info {
   font-size: 14px;
+  color: #86909c;
+}
+
+/* 内容容器 */
+.content-wrapper {
+  display: flex;
+}
+
+/* 左侧侧边栏（匹配图片样式） */
+.sidebar {
+  width: 180px;
+  background-color: #0F2E57; /* 图片同款深蓝色背景 */
+  color: #fff;
+  padding: 0;
+  box-shadow: 2px 0 8px rgba(0,0,0,0.1);
+}
+
+/* 侧边栏标题（医生工作站） */
+.sidebar-header {
   display: flex;
   align-items: center;
   gap: 8px;
-}
-
-.back-btn:hover {
-  background-color: #5daf34;
-  transform: translateY(-2px);
-  box-shadow: 0 2px 8px rgba(103, 194, 58, 0.3);
-}
-
-.btn-icon {
+  padding: 16px 20px;
   font-size: 16px;
+  font-weight: 600;
+  border-bottom: 1px solid rgba(255,255,255,0.1);
 }
 
-/* 加载状态样式优化 */
-.loading {
+/* 侧边栏菜单项 */
+.sidebar-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 20px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+/* 选中项高亮 */
+.sidebar-item.active {
+  background-color: #1A4B8C; /* 选中项亮蓝色背景 */
+}
+
+.sidebar-item:hover:not(.active) {
+  background-color: #153A69;
+}
+
+/* 侧边栏图标 */
+.icon {
+  font-size: 18px;
+  width: 20px; /* 固定图标宽度，文字对齐 */
   text-align: center;
-  padding: 80px;
-  background-color: #fff;
-  border-radius: 12px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+}
+
+/* 右侧病历内容区 */
+.record-content {
+  flex: 1;
+  padding: 24px;
+}
+
+/* 加载状态 */
+.loading-state {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 16px;
+  padding: 40px;
+  background-color: #fff;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
 }
 
-.loading-icon {
-  font-size: 48px;
-  color: #3b82f6;
+.loading-spinner {
+  font-size: 24px;
+  color: #1890ff;
+  margin-bottom: 8px;
   animation: spin 1.5s linear infinite;
 }
 
-.loading .error {
-  color: #ef4444;
+/* 患者信息 */
+.patient-info {
   font-size: 16px;
-  max-width: 500px;
-  line-height: 1.6;
+  margin-bottom: 8px;
 }
 
-/* 错误提示样式优化 */
-.error-alert {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 16px;
-  color: #ef4444;
+.patient-info .label {
+  font-weight: 500;
+  color: #4e5969;
+}
+
+.patient-info .value {
+  color: #1d2129;
+}
+
+.hint-text {
   font-size: 14px;
-  background-color: #fff1f0;
-  border-radius: 8px;
-  border: 1px solid #fecdd3;
-  margin-bottom: 24px;
+  color: #86909c;
+  margin-bottom: 20px;
 }
 
-.error-alert-icon {
-  font-size: 20px;
-  flex-shrink: 0;
-}
-
-.error-alert p {
-  margin: 0;
-  line-height: 1.6;
-}
-
-/* 表单容器样式升级 */
-.form-container {
+/* 表单模块样式 */
+.form-modules {
   background-color: #fff;
-  padding: 32px;
-  border-radius: 12px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
-  border: 1px solid #f0f5ff;
-}
-
-/* 表单样式优化 */
-.report-form {
+  border-radius: 8px;
+  padding: 20px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
   display: flex;
   flex-direction: column;
-  gap: 28px;
+  gap: 20px;
 }
 
-.form-item {
+.form-module {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px;
 }
 
-.required-item .form-label {
-  display: flex;
-  align-items: center;
-  gap: 4px;
+.module-label {
+  font-weight: 500;
+  color: #1d2129;
+  font-size: 14px;
+}
+
+.module-textarea {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid #e5e9f2;
+  border-radius: 4px;
+  font-size: 14px;
+  color: #1d2129;
+  resize: vertical;
+  min-height: 60px;
+}
+
+.module-textarea:disabled {
+  background-color: #f5f7fa;
+  color: #86909c;
+  cursor: not-allowed;
+}
+
+/* 必填项样式 */
+.required .module-label {
+  position: relative;
 }
 
 .required-mark {
-  color: #ef4444;
-  font-size: 16px;
+  color: #f5222d;
+  font-size: 14px;
+  margin-left: 4px;
 }
 
-.form-label {
-  font-weight: 600;
-  color: #333;
-  font-size: 15px;
-}
-
-/* 记录ID样式优化 */
-.record-id {
-  color: #64748b;
-  font-size: 16px;
-  padding: 12px 16px;
-  background-color: #f8fafc;
-  border-radius: 8px;
-  border: 1px solid #e2e8f0;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  width: fit-content;
-}
-
-.id-icon {
-  color: #3b82f6;
-  font-size: 18px;
-}
-
-/* 文本域样式优化 */
-.form-textarea {
-  width: 100%;
-  padding: 16px;
-  border: 1px solid #e2e8f0;
-  border-radius: 8px;
-  font-size: 16px;
-  color: #1e293b;
-  resize: vertical;
-  transition: all 0.3s ease;
-  background-color: #f8fafc;
-  min-height: 200px;
-  line-height: 1.8;
-}
-
-.form-textarea:focus {
-  outline: none;
-  border-color: #3b82f6;
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
-  background-color: #fff;
-}
-
-.form-textarea:disabled {
-  background-color: #f1f5f9;
-  color: #94a3b8;
-  cursor: not-allowed;
-  border-color: #cbd5e1;
-}
-
-.form-textarea::placeholder {
-  color: #94a3b8;
-  font-size: 15px;
-}
-
-/* 表单校验错误提示样式 */
-.form-error {
-  color: #ef4444;
-  font-size: 13px;
+/* 错误提示 */
+.error-tip {
+  font-size: 12px;
+  color: #f5222d;
   margin-top: 4px;
-  display: flex;
-  align-items: center;
-  gap: 6px;
 }
 
-.form-error .error-icon {
+/* 按钮组 */
+.btn-group {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+  margin-top: 12px;
+}
+
+.back-btn {
+  padding: 8px 16px;
+  background-color: #fff;
+  border: 1px solid #e5e9f2;
+  border-radius: 4px;
+  color: #4e5969;
+  cursor: pointer;
   font-size: 14px;
 }
 
-/* 文本域提示样式 */
-.textarea-hint {
-  color: #94a3b8;
-  font-size: 13px;
-  margin-top: 6px;
-  line-height: 1.5;
-}
-
-/* 按钮区域样式 */
-.form-actions {
-  display: flex;
-  justify-content: flex-end;
-  margin-top: 16px;
-}
-
-/* 提交按钮样式优化 */
 .submit-btn {
-  padding: 14px 32px;
-  background-color: #3b82f6;
+  padding: 8px 16px;
+  background-color: #1890ff;
   color: #fff;
   border: none;
-  border-radius: 8px;
-  font-size: 16px;
-  font-weight: 500;
+  border-radius: 4px;
   cursor: pointer;
-  transition: all 0.3s ease;
+  font-size: 14px;
   display: flex;
   align-items: center;
   gap: 8px;
 }
 
-.submit-btn:hover:not(:disabled) {
-  background-color: #2563eb;
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.25);
+.submit-btn:disabled {
+  background-color: #91d5ff;
+  cursor: not-allowed;
 }
 
-.submit-btn:disabled {
-  background-color: #93c5fd;
-  cursor: not-allowed;
-  transform: none;
-  box-shadow: none;
+.loading-icon {
+  font-size: 14px;
+  animation: spin 1.5s linear infinite;
+}
+
+/* 动画 */
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
 }
 
 /* 响应式适配 */
 @media (max-width: 768px) {
-  .diagnosis-report {
-    padding: 20px 16px;
-  }
-
-  .header {
+  .content-wrapper {
     flex-direction: column;
-    align-items: flex-start;
-    gap: 16px;
   }
-
-  .form-container {
-    padding: 24px 16px;
-  }
-
-  .record-id {
+  .sidebar {
     width: 100%;
-    box-sizing: border-box;
+    display: flex;
+    flex-wrap: wrap;
   }
-
-  .submit-btn {
+  .sidebar-header {
     width: 100%;
+  }
+  .sidebar-item {
+    flex: 1;
     justify-content: center;
-    padding: 14px;
+    padding: 12px 8px;
   }
-
-  .loading {
-    padding: 40px 16px;
-  }
-}
-
-/* 加载动画 */
-@keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
 }
 </style>

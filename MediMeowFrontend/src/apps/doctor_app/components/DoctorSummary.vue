@@ -1,513 +1,630 @@
 <template>
-  <div class="disease-summary">
-    <div class="header">
-      <h2>病情摘要</h2>
-      <button @click="goBack" class="back-btn">返回待诊列表</button>
-    </div>
+  <div class="doctor-home">
+    <!-- 左侧侧边栏（与医生主页统一） -->
+    <aside class="sidebar">
+      <div class="sidebar-header">
+        <span class="station-icon">👨‍⚕️</span>
+        <h1>医生工作站</h1>
+      </div>
+      <nav class="sidebar-nav">
+        <a 
+          class="nav-item" 
+          :class="{ 'active': $route.path === '/doctor' }"
+          @click="goToQueue"
+        >
+          <span class="nav-icon">📋</span>
+          <span>患者队列</span>
+        </a>
+        <a 
+          class="nav-item" 
+          :class="{ 'active': $route.path.startsWith('/doctor/summary') }"
+          @click="goToDetailFromSidebar"
+        >
+          <span class="nav-icon">👤</span>
+          <span>患者详情</span>
+        </a>
+        <a 
+          class="nav-item" 
+          :class="{ 'active': $route.path.startsWith('/doctor/report') }"
+          @click="goToRecord"
+        >
+          <span class="nav-icon">📄</span>
+          <span>电子病历</span>
+        </a>
+        <a 
+          class="nav-item" 
+          :class="{ 'active': $route.path === '/doctor/questionnaire/import' }"
+          @click="goToImport"
+        >
+          <span class="nav-icon">📤</span>
+          <span>导入问卷</span>
+        </a>
+      </nav>
+    </aside>
 
-    <!-- 加载状态 -->
-    <div v-if="loading" class="loading">
-      <div class="loading-icon">🔍</div>
-      <p>加载病情摘要中...</p>
-    </div>
+    <!-- 右侧主内容区（病情摘要界面） -->
+    <main class="main-content">
+      <!-- 顶部医生信息栏 -->
+      <header class="top-bar">
+        <div class="top-right">
+          <span class="notify-icon">🔔</span>
+          <span class="doctor-name">{{ doctorName }}</span>
+          <span class="department">| {{ doctorDept }}</span>
+        </div>
+      </header>
 
-    <!-- 错误提示 -->
-    <div v-else-if="errorMsg" class="error">
-      <div class="error-icon">❌</div>
-      <p>{{ errorMsg }}</p>
-      <button @click="goBack" class="error-btn">返回待诊列表</button>
-    </div>
+      <!-- 核心内容区 -->
+      <div class="content-area">
+        <h2 class="page-title">患者病情摘要</h2>
 
-    <!-- 病情摘要内容 -->
-    <div v-else class="summary-container">
-      <!-- 用户基本信息 -->
-      <div class="user-info card">
-        <h3 class="card-title">
-          <span class="title-icon">👤</span> 患者信息
-        </h3>
-        <div class="info-grid">
-          <div class="info-item">
-            <span class="info-label">姓名：</span>
-            <span class="info-value">{{ userInfo.username || '暂无' }}</span>
+        <!-- 加载状态 -->
+        <div v-if="loading" class="loading-state">
+          <span class="loading-spinner">🔄</span>
+          <p>正在加载患者病情数据...</p>
+        </div>
+
+        <!-- 错误状态 -->
+        <div v-else-if="errorMsg" class="error-state">
+          <span class="error-icon">❌</span>
+          <p>{{ errorMsg }}</p>
+          <button class="retry-btn" @click="fetchSummary">重试</button>
+        </div>
+
+        <!-- 病情摘要主体 -->
+        <div v-else class="summary-container">
+          <!-- 患者基本信息卡片 -->
+          <div class="card basic-card">
+            <h3 class="card-title">
+              <i class="icon">👤</i> 患者基本信息
+            </h3>
+            <div class="info-grid">
+              <div class="info-row">
+                <label>姓名：</label>
+                <span>{{ patientInfo.name }}</span>
+              </div>
+              <div class="info-row">
+                <label>联系电话：</label>
+                <span>{{ patientInfo.phone }}</span>
+              </div>
+              <div class="info-row">
+                <label>用户ID：</label>
+                <span>{{ patientInfo.id }}</span>
+              </div>
+              <div class="info-row">
+                <label>注册时间：</label>
+                <span>{{ formatTime(patientInfo.createdAt) }}</span>
+              </div>
+            </div>
           </div>
-          <div class="info-item">
-            <span class="info-label">手机号：</span>
-            <span class="info-value">{{ userInfo.phone_number || '暂无' }}</span>
+
+          <!-- AI病情分析卡片 -->
+          <div class="card ai-card">
+            <h3 class="card-title">
+              <i class="icon">🩺</i> AI病情分析
+            </h3>
+            <div class="ai-grid">
+              <div class="ai-row">
+                <label>主诉：</label>
+                <p>{{ symptomInfo.chiefComplaint }}</p>
+              </div>
+              <div class="ai-row">
+                <label>关键症状：</label>
+                <div class="symptom-tags">
+                  <span 
+                    v-for="symptom in symptomInfo.keySymptoms" 
+                    :key="symptom" 
+                    class="tag"
+                  >
+                    {{ symptom }}
+                  </span>
+                </div>
+              </div>
+              <div class="ai-row">
+                <label>影像摘要：</label>
+                <p>{{ symptomInfo.imageSummary || "无影像数据" }}</p>
+              </div>
+              <div class="ai-row">
+                <label>重要备注：</label>
+                <p>{{ symptomInfo.importantNotes }}</p>
+              </div>
+              <div class="ai-row">
+                <label>提交ID：</label>
+                <span>{{ symptomInfo.submissionId }}</span>
+              </div>
+              <div class="ai-row">
+                <label>科室匹配：</label>
+                <span class="match-tag" :class="symptomInfo.isDeptMatch ? 'match' : 'unmatch'">
+                  {{ symptomInfo.isDeptMatch ? "匹配当前科室" : "非当前科室" }}
+                </span>
+              </div>
+            </div>
           </div>
-          <div class="info-item">
-            <span class="info-label">注册时间：</span>
-            <span class="info-value">{{ formatTime(userInfo.created_at) }}</span>
-          </div>
-          <div class="info-item">
-            <span class="info-label">更新时间：</span>
-            <span class="info-value">{{ formatTime(userInfo.updated_at) }}</span>
+
+          <!-- 操作按钮 -->
+          <div class="btn-group">
+            <button class="back-btn" @click="goToQueue">返回队列</button>
+            <button class="report-btn" @click="goToRecord">生成电子病历</button>
           </div>
         </div>
       </div>
-
-      <!-- AI病情摘要 -->
-      <div class="ai-summary card">
-        <h3 class="card-title">
-          <span class="title-icon">🤖</span> AI辅助诊断摘要
-        </h3>
-        <div class="summary-grid">
-          <div class="summary-item">
-            <span class="summary-label">主诉概括：</span>
-            <span class="summary-value">{{ aiResult.key_info.chief_complaint || '暂无' }}</span>
-          </div>
-          <div class="summary-item">
-            <span class="summary-label">核心症状：</span>
-            <span class="summary-value">{{ aiResult.key_info.key_symptoms || '暂无' }}</span>
-          </div>
-          <div class="summary-item" v-if="aiResult.key_info.image_summary">
-            <span class="summary-label">图片概述：</span>
-            <span class="summary-value">{{ aiResult.key_info.image_summary }}</span>
-          </div>
-          <div class="summary-item" v-else>
-            <span class="summary-label">图片概述：</span>
-            <span class="summary-value">无相关图片上传</span>
-          </div>
-          <div class="summary-item warning">
-            <span class="summary-label">医生注意事项：</span>
-            <span class="summary-value">{{ aiResult.key_info.important_notes || '暂无特别提示' }}</span>
-          </div>
-          <div class="summary-item">
-            <span class="summary-label">科室匹配：</span>
-            <span class="summary-value">
-              <span class="match-tag" :class="aiResult.is_department ? 'match' : 'unmatch'">
-                {{ aiResult.is_department ? '匹配' : '不匹配' }}
-              </span>
-            </span>
-          </div>
-        </div>
-      </div>
-
-      <!-- 提交诊断结果跳转按钮 -->
-      <div class="summary-actions">
-        <router-link :to="`/doctor/report/${route.params.record_id}`" class="report-btn">
-          <span class="btn-icon">📝</span> 进入提交诊断结果
-        </router-link>
-      </div>
-    </div>
+    </main>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
-import { useRoute, useRouter } from 'vue-router';
-import { getDiseaseSummary } from '../api/summary';
-import type { SummaryResponse, AiResult, User } from '../api/summary'; // 导入修正后的嵌套类型
+import { ref, computed, onMounted } from "vue";
+import { useRoute, useRouter } from "vue-router";
 
-// 路由实例（获取参数+跳转）
+// 拆分导入：值导入（函数）+ 类型导入（接口/类型别名）
+import { getDiseaseSummary } from "../api/summary";
+import type { SummaryResponse, User, AiResult, KeyInfo } from "../api/summary";
+
+// 路由与导航实例
 const route = useRoute();
 const router = useRouter();
 
-// 响应式变量：初始值与类型定义严格对齐
+// 响应式状态
 const loading = ref(true);
-const errorMsg = ref('');
-const userInfo = ref<User>({
-  id: '',
-  phone_number: '',
-  username: '',
-  created_at: '',
-  updated_at: ''
-});
-const aiResult = ref<AiResult>({
-  submission_id: '',
-  is_department: true,
-  key_info: {
-    chief_complaint: '',
-    key_symptoms: '',
-    image_summary: undefined,
-    important_notes: ''
+const errorMsg = ref("");
+
+// 医生信息（从localStorage读取，避免JSON.parse类型警告）
+const doctorInfo = computed(() => {
+  const rawInfo = localStorage.getItem("doctorInfo");
+  if (!rawInfo) return { username: "张医生", department: "呼吸内科" };
+  
+  try {
+    return JSON.parse(rawInfo) as { username: string; department: string };
+  } catch {
+    return { username: "张医生", department: "呼吸内科" };
   }
 });
+const doctorName = computed(() => doctorInfo.value.username);
+const doctorDept = computed(() => doctorInfo.value.department);
 
-// 格式化时间（优化显示格式，兼容空值）
-const formatTime = (timeStr: string) => {
-  if (!timeStr) return '暂无';
-  // 优化时间显示：年-月-日 时:分:秒
-  return new Date(timeStr).toLocaleString('zh-CN', {
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit'
-  });
-};
+// 患者基本信息（适配原有User类型）
+const patientInfo = ref({
+  id: "",
+  name: "",
+  phone: "",
+  createdAt: "",
+});
 
-// 返回待诊列表
-const goBack = () => {
-  router.push('/doctor/queue');
-};
+// 症状信息（适配原有AiResult和KeyInfo类型）
+const symptomInfo = ref({
+  chiefComplaint: "",
+  keySymptoms: [] as string[],
+  imageSummary: "",
+  importantNotes: "",
+  submissionId: "",
+  isDeptMatch: false,
+});
 
-onMounted(async () => {
+// 时间格式化工具（处理空值）
+const formatTime = (timeStr: string | undefined) => {
+  if (!timeStr) return "未知";
   try {
-    // 1. 获取路由参数中的record_id（从待诊列表跳转携带）
-    const recordId = route.params.record_id as string;
-    if (!recordId) {
-      errorMsg.value = '缺少待诊记录ID，无法获取病情摘要';
-      return;
+    return new Date(timeStr).toLocaleString("zh-CN", {
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  } catch {
+    return "未知";
+  }
+};
+
+// 数据获取函数（增加参数校验）
+const fetchSummary = async () => {
+  loading.value = true;
+  errorMsg.value = "";
+  
+  try {
+    // 严格校验路由参数
+    const recordId = route.params.recordId as string;
+    if (!recordId || recordId.trim() === "") {
+      throw new Error("缺少有效的患者记录ID");
     }
 
-    // 2. 验证登录状态（仅校验token存在，实际请求由service自动携带）
-    const token = localStorage.getItem('doctorToken');
-    if (!token) {
-      errorMsg.value = '未登录，请重新登录';
-      setTimeout(() => router.push('/doctor/login'), 1500);
-      return;
+    // 调用API并校验响应
+    const res: SummaryResponse = await getDiseaseSummary(recordId);
+    if (!res || res.base.code !== "10000") {
+      throw new Error(res?.base?.msg || "获取病情摘要失败");
     }
 
-    // 3. 调用API获取病情摘要（响应为嵌套结构：base + data）
-    const res = await getDiseaseSummary(recordId);
-    
-    // 4. 处理响应结果：适配嵌套结构的base和data层级
-    if (res.base.code === '10000') {
-      userInfo.value = res.data.user; // 从data层级读取user
-      aiResult.value = res.data.ai_result; // 从data层级读取ai_result
-    } else {
-      errorMsg.value = res.base.msg || '获取病情摘要失败';
-    }
-  } catch (error) {
-    errorMsg.value = '网络异常，请稍后重试';
-    console.error('获取病情摘要失败：', error);
+    // 映射患者基本信息（类型断言确保安全）
+    const user = res.data.user as User;
+    patientInfo.value = {
+      id: user.id || "未知",
+      name: user.username || "未知",
+      phone: user.phone_number || "未知",
+      createdAt: user.created_at || "",
+    };
+
+    // 映射AI病情信息（类型断言+空值处理）
+    const aiResult = res.data.ai_result as AiResult;
+    const keyInfo = aiResult.key_info as KeyInfo;
+    symptomInfo.value = {
+      chiefComplaint: keyInfo.chief_complaint || "暂无",
+      keySymptoms: keyInfo.key_symptoms 
+        ? keyInfo.key_symptoms.split(/[,，;；]/).filter(s => s.trim() !== "") 
+        : [],
+      imageSummary: keyInfo.image_summary || "暂无",
+      importantNotes: keyInfo.important_notes || "暂无",
+      submissionId: aiResult.submission_id || "未知",
+      isDeptMatch: aiResult.is_department || false,
+    };
+  } catch (err: any) {
+    errorMsg.value = err.message || "网络异常，请稍后重试";
+    console.error("病情摘要加载失败：", err);
   } finally {
     loading.value = false;
   }
+};
+
+// 路由跳转函数（增加安全性校验）
+const goToQueue = () => router.push("/doctor");
+
+const goToDetailFromSidebar = () => {
+  const recordId = route.params.recordId as string;
+  if (recordId) {
+    router.push(`/doctor/summary/${recordId}`);
+  } else {
+    alert("请先选择有效的患者");
+    router.push("/doctor");
+  }
+};
+
+const goToRecord = () => {
+  const recordId = route.params.recordId as string;
+  if (recordId) {
+    router.push(`/doctor/report/${recordId}`);
+  } else {
+    alert("请先选择患者以生成电子病历");
+    router.push("/doctor");
+  }
+};
+
+const goToImport = () => router.push("/doctor/questionnaire/import");
+
+// 页面挂载时加载数据（确保DOM就绪）
+onMounted(() => {
+  // 延迟执行避免DOM渲染冲突
+  setTimeout(fetchSummary, 100);
 });
 </script>
 
 <style scoped>
-/* 统一背景渐变，与其他页面风格保持一致 */
-.disease-summary {
-  padding: 40px 24px;
-  max-width: 1200px;
-  margin: 0 auto;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  background: linear-gradient(135deg, #f5fafe 0%, #eaf6fa 100%);
-  min-height: calc(100vh - 80px);
-}
-
-/* 头部样式优化 */
-.header {
+/* 全局布局样式 */
+.doctor-home {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 32px;
+  height: 100vh;
+  font-family: "Microsoft YaHei", "PingFang SC", sans-serif;
+  background-color: #f5f7fa;
+  overflow: hidden;
 }
 
-.header h2 {
-  font-size: 26px;
-  color: #1e293b;
-  font-weight: 600;
-  margin: 0;
-  position: relative;
+/* 左侧侧边栏样式 */
+.sidebar {
+  width: 200px;
+  background-color: #1a365d;
+  color: #ffffff;
+  padding: 20px 0;
+  box-shadow: 2px 0 8px rgba(0, 0, 0, 0.08);
 }
 
-/* 标题下划线装饰 */
-.header h2::after {
-  content: '';
-  display: block;
-  width: 70px;
-  height: 3px;
-  background-color: #3b82f6;
-  margin-top: 8px;
-  border-radius: 2px;
-}
-
-/* 返回按钮样式优化（与其他页面统一绿色系） */
-.back-btn {
-  padding: 9px 18px;
-  background-color: #67c23a;
-  color: #fff;
-  border: none;
-  border-radius: 8px;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  font-size: 14px;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.back-btn:hover {
-  background-color: #5daf34;
-  transform: translateY(-2px);
-  box-shadow: 0 2px 8px rgba(103, 194, 58, 0.3);
-}
-
-/* 加载状态样式优化 */
-.loading {
-  text-align: center;
-  padding: 80px;
-  background-color: #fff;
-  border-radius: 12px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 16px;
-}
-
-.loading-icon {
-  font-size: 48px;
-  color: #3b82f6;
-  animation: spin 1.5s linear infinite;
-}
-
-.loading p {
-  color: #64748b;
-  font-size: 16px;
-  margin: 0;
-}
-
-/* 错误提示样式优化 */
-.error {
-  text-align: center;
-  padding: 60px 24px;
-  background-color: #fff;
-  border-radius: 12px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 20px;
-}
-
-.error-icon {
-  font-size: 48px;
-  color: #ef4444;
-}
-
-.error p {
-  color: #ef4444;
-  font-size: 16px;
-  margin: 0;
-  max-width: 500px;
-  line-height: 1.6;
-}
-
-.error-btn {
-  padding: 8px 16px;
-  background-color: #3b82f6;
-  color: #fff;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  font-size: 14px;
-}
-
-.error-btn:hover {
-  background-color: #2563eb;
-}
-
-/* 内容容器样式 */
-.summary-container {
-  display: flex;
-  flex-direction: column;
-  gap: 24px;
-}
-
-/* 卡片通用样式升级 */
-.card {
-  padding: 30px;
-  background-color: #fff;
-  border-radius: 12px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
-  border: 1px solid #f0f5ff;
-}
-
-.card-title {
-  margin: 0 0 24px 0;
-  color: #1e293b;
-  border-bottom: 1px solid #e0e7ff;
-  padding-bottom: 12px;
-  font-size: 18px;
+.sidebar-header {
+  padding: 0 20px 20px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.15);
   display: flex;
   align-items: center;
   gap: 10px;
 }
 
-.title-icon {
-  font-size: 20px;
-  color: #3b82f6;
+.station-icon {
+  font-size: 24px;
 }
 
-/* 患者信息网格布局 */
-.info-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-  gap: 16px;
+.sidebar-header h1 {
+  font-size: 16px;
+  font-weight: 600;
+  margin: 0;
 }
 
-.info-item {
-  padding: 12px;
-  background-color: #f8fafc;
-  border-radius: 8px;
+.sidebar-nav {
+  padding: 20px 10px;
+}
+
+.nav-item {
   display: flex;
   align-items: center;
-  gap: 8px;
-}
-
-.info-label {
-  font-weight: 600;
-  color: #333;
-  min-width: 70px;
+  gap: 10px;
+  padding: 12px 15px;
+  border-radius: 4px;
+  cursor: pointer;
+  margin-bottom: 8px;
   font-size: 14px;
-}
-
-.info-value {
-  color: #64748b;
-  font-size: 14px;
-  flex: 1;
-}
-
-/* AI摘要网格布局 */
-.summary-grid {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.summary-item {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  align-items: flex-start;
-  padding: 10px;
-  border-radius: 8px;
   transition: background-color 0.2s ease;
 }
 
-.summary-item:hover {
-  background-color: #f8fafc;
+.nav-item.active {
+  background-color: #2d5b99;
 }
 
-.summary-label {
-  font-weight: 600;
-  color: #333;
-  min-width: 110px;
-  font-size: 14px;
-  background-color: #e0e7ff;
-  color: #3b82f6;
-  padding: 4px 8px;
-  border-radius: 4px;
-  align-self: center;
+.nav-item:hover:not(.active) {
+  background-color: #244a7c;
 }
 
-.summary-value {
-  color: #64748b;
-  font-size: 14px;
+.nav-icon {
+  font-size: 16px;
+}
+
+/* 右侧主内容区样式 */
+.main-content {
   flex: 1;
-  line-height: 1.6;
+  overflow-y: auto;
 }
 
-/* 警告样式优化 */
-.warning {
-  background-color: #fff8f0;
-  border-left: 4px solid #e6a23c;
-  padding: 14px;
+.top-bar {
+  height: 60px;
+  background-color: #ffffff;
+  border-bottom: 1px solid #e5e9f2;
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  padding: 0 30px;
 }
 
-.warning .summary-label {
-  background-color: #fee2cc;
-  color: #d97706;
+.top-right {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  font-size: 14px;
 }
 
-.warning .summary-value {
-  color: #d97706;
+.notify-icon {
+  font-size: 20px;
+  cursor: pointer;
+  transition: color 0.2s;
+}
+
+.notify-icon:hover {
+  color: #1890ff;
+}
+
+.doctor-name {
   font-weight: 500;
+  color: #1d2129;
 }
 
-/* 科室匹配标签 */
-.match-tag {
-  padding: 4px 8px;
+.department {
+  color: #86909c;
+}
+
+/* 内容区域样式 */
+.content-area {
+  padding: 30px;
+}
+
+.page-title {
+  font-size: 22px;
+  color: #1d2129;
+  margin: 0 0 25px 0;
+  font-weight: 600;
+}
+
+/* 加载/错误状态样式 */
+.loading-state, .error-state {
+  background-color: #ffffff;
+  border-radius: 8px;
+  padding: 40px;
+  text-align: center;
+  margin: 20px 0;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.loading-spinner {
+  font-size: 32px;
+  display: block;
+  margin-bottom: 15px;
+  animation: spin 1.5s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.error-icon {
+  font-size: 32px;
+  color: #f5222d;
+  display: block;
+  margin-bottom: 15px;
+}
+
+.retry-btn {
+  padding: 8px 16px;
+  background-color: #1890ff;
+  color: #ffffff;
+  border: none;
   border-radius: 4px;
-  font-size: 13px;
+  cursor: pointer;
+  margin-top: 10px;
+  transition: background-color 0.2s;
+}
+
+.retry-btn:hover {
+  background-color: #096dd9;
+}
+
+/* 摘要容器样式 */
+.summary-container {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.card {
+  background-color: #ffffff;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  padding: 20px;
+  transition: box-shadow 0.2s;
+}
+
+.card:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+.card-title {
+  font-size: 16px;
+  color: #1d2129;
+  margin: 0 0 20px 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+}
+
+.icon {
+  font-size: 18px;
+  color: #1890ff;
+}
+
+/* 基本信息卡片样式 */
+.basic-card .info-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 15px;
+}
+
+.info-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.info-row label {
   font-weight: 500;
+  color: #4e5969;
+  min-width: 60px;
+  font-size: 14px;
 }
 
-.match {
-  background-color: #dcfce7;
-  color: #16a34a;
+.info-row span {
+  color: #1d2129;
+  font-size: 14px;
 }
 
-.unmatch {
-  background-color: #fee2e2;
-  color: #dc2626;
+/* AI分析卡片样式 */
+.ai-card .ai-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
 }
 
-/* 提交诊断按钮样式优化 */
-.summary-actions {
-  margin-top: 8px;
-  text-align: right;
+.ai-row {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.ai-row label {
+  font-weight: 500;
+  color: #4e5969;
+  font-size: 14px;
+}
+
+.ai-row p {
+  margin: 0;
+  color: #1d2129;
+  line-height: 1.5;
+  font-size: 14px;
+}
+
+.symptom-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.tag {
+  background-color: #e6f7ff;
+  color: #1890ff;
+  padding: 4px 12px;
+  border-radius: 16px;
+  font-size: 12px;
+  transition: background-color 0.2s;
+}
+
+.tag:hover {
+  background-color: #bae7ff;
+}
+
+.match-tag {
+  padding: 4px 12px;
+  border-radius: 16px;
+  font-size: 12px;
+}
+
+.match-tag.match {
+  background-color: #f6ffed;
+  color: #52c41a;
+}
+
+.match-tag.unmatch {
+  background-color: #fff1f0;
+  color: #f5222d;
+}
+
+/* 按钮组样式 */
+.btn-group {
+  display: flex;
+  justify-content: flex-end;
+  gap: 15px;
+  margin-top: 20px;
+}
+
+.back-btn, .report-btn {
+  padding: 10px 20px;
+  border-radius: 4px;
+  font-size: 14px;
+  cursor: pointer;
+  border: none;
+  transition: all 0.2s;
+}
+
+.back-btn {
+  background-color: #f5f7fa;
+  color: #4e5969;
+}
+
+.back-btn:hover {
+  background-color: #e5e9f2;
 }
 
 .report-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 12px 32px;
-  background-color: #3b82f6;
-  color: #fff;
-  text-decoration: none;
-  border-radius: 8px;
-  font-size: 16px;
-  font-weight: 500;
-  transition: all 0.3s ease;
-  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.15);
+  background-color: #1890ff;
+  color: #ffffff;
 }
 
 .report-btn:hover {
-  background-color: #2563eb;
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.25);
-}
-
-.btn-icon {
-  font-size: 18px;
+  background-color: #096dd9;
 }
 
 /* 响应式适配 */
 @media (max-width: 768px) {
-  .disease-summary {
-    padding: 20px 16px;
-  }
-
-  .header {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 16px;
-  }
-
-  .card {
-    padding: 20px 16px;
-  }
-
-  .info-grid {
+  .basic-card .info-grid {
     grid-template-columns: 1fr;
   }
-
-  .summary-label {
-    min-width: 90px;
+  
+  .sidebar {
+    width: 180px;
   }
-
-  .report-btn {
-    width: 100%;
-    justify-content: center;
-    padding: 12px;
+  
+  .content-area {
+    padding: 20px;
   }
-
-  .loading, .error {
-    padding: 40px 16px;
-  }
-}
-
-/* 加载动画 */
-@keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
 }
 </style>

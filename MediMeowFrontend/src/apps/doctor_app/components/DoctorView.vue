@@ -1,144 +1,325 @@
 <template>
-  <div class="doctor-view">
-    <h1>医生工作平台</h1>
-    <div class="function-cards">
-      <router-link to="/doctor/queue" class="card">
-        <h3>待诊列表</h3>
-        <p>查看并处理患者的待诊请求</p>
-      </router-link>
-      <router-link to="/doctor/questionnaire/import" class="card">
-        <h3>导入问卷</h3>
-        <p>上传.xlsx格式问卷，用于患者评估</p>
-      </router-link>
-    </div>
+  <div class="doctor-home">
+    <!-- 左侧侧边栏 -->
+    <aside class="sidebar">
+      <div class="sidebar-header">
+        <span class="station-icon">👨‍⚕️</span>
+        <h1>医生工作站</h1>
+      </div>
+      <nav class="sidebar-nav">
+        <a 
+          class="nav-item" 
+          :class="{ active: $route.path === '/doctor' }"
+          @click="goToQueue"
+        >
+          <span class="nav-icon">📋</span>
+          <span>患者队列</span>
+        </a>
+        <a 
+          class="nav-item" 
+          :class="{ active: $route.path.startsWith('/doctor/summary') }"
+          @click="goToDetailFromSidebar"
+        >
+          <span class="nav-icon">👤</span>
+          <span>患者详情</span>
+        </a>
+        <a 
+          class="nav-item" 
+          :class="{ active: $route.path.startsWith('/doctor/report') }"
+          @click="goToRecord"
+        >
+          <span class="nav-icon">📄</span>
+          <span>电子病历</span>
+        </a>
+        <a 
+          class="nav-item" 
+          :class="{ active: $route.path === '/doctor/questionnaire/import' }"
+          @click="goToImport"
+        >
+          <span class="nav-icon">📤</span>
+          <span>导入问卷</span>
+        </a>
+      </nav>
+    </aside>
+
+    <!-- 右侧主内容区（彻底简化.value使用） -->
+    <main class="main-content">
+      <header class="top-bar">
+        <div class="top-right">
+          <span class="notify-icon">🔔</span>
+          <span class="doctor-name">{{ doctorName }}</span>
+          <span class="department">| {{ department }}</span>
+        </div>
+      </header>
+
+      <div class="content-area">
+        <h2 class="page-title">患者队列</h2>
+        <div class="queue-header">
+          <h3>待诊患者队列</h3>
+          <p>当前有 {{ recordIds.length }} 名患者在排队等候</p>
+        </div>
+
+        <div v-if="loading" class="loading-state">加载待诊列表中...</div>
+        <div v-if="errorMsg" class="error-state">{{ errorMsg }}</div>
+
+        <div class="queue-list" v-else>
+          <div 
+            v-for="(recordId, index) in recordIds" 
+            :key="recordId"
+            class="queue-item"
+            :class="{ 
+              'first-patient': index === 0, 
+              'selected': recordId === selectedRecordId 
+            }"
+            @click="handlePatientSelect(recordId)"
+          >
+            <span class="patient-id">待诊患者ID：{{ recordId }}</span>
+            <button class="view-btn" @click="handleViewSummary(recordId)">
+              查看病情摘要
+            </button>
+          </div>
+        </div>
+      </div>
+    </main>
   </div>
 </template>
 
-<script setup>
-// 无额外逻辑，仅作为路由跳转入口
+<script setup lang="ts">
+import { ref, onMounted, computed } from "vue";
+import { useRouter } from "vue-router";
+import { getDoctorQueue } from "../api/queue";
+import type { DoctorQueueResponse } from "../api/queue";
+
+// 1. 彻底简化路由与状态（避免TS类型歧义）
+const router = useRouter();
+const recordIds = ref<string[]>([]);
+// 关键：用空字符串代替null，消除空值类型问题
+const selectedRecordId = ref<string>(""); 
+const loading = ref(false);
+const errorMsg = ref("");
+
+// 2. 计算属性提取医生信息（避免JSON.parse的TS警告）
+const doctorInfo = computed(() => {
+  const info = localStorage.getItem("doctorInfo");
+  return info ? JSON.parse(info) : { username: "张医生", department: "呼吸内科", id: "" };
+});
+const doctorName = computed(() => doctorInfo.value.username);
+const department = computed(() => doctorInfo.value.department);
+const doctorId = computed(() => doctorInfo.value.id);
+
+// 3. 页面加载：极简逻辑+错误兜底
+onMounted(async () => {
+  loading.value = true;
+  try {
+    if (!doctorId.value) throw new Error("医生信息未找到");
+    
+    const res: DoctorQueueResponse = await getDoctorQueue(doctorId.value);
+    recordIds.value = res.base.code === "10000" ? res.data.record_ids : [];
+    errorMsg.value = res.base.code !== "10000" ? res.base.msg || "加载失败" : "";
+  } catch (err: any) {
+    errorMsg.value = err.message || "网络异常";
+  } finally {
+    loading.value = false;
+  }
+});
+
+// 4. 统一事件处理（避免模板中直接操作.value）
+const handlePatientSelect = (recordId: string) => {
+  selectedRecordId.value = recordId;
+};
+
+const handleViewSummary = (recordId: string) => {
+  selectedRecordId.value = recordId;
+  router.push(`/doctor/summary/${recordId}`);
+};
+
+// 5. 导航函数：极简+类型安全
+const goToQueue = () => router.push("/doctor");
+const goToDetailFromSidebar = () => {
+  if (selectedRecordId.value) {
+    router.push(`/doctor/summary/${selectedRecordId.value}`);
+  } else {
+    alert("请先选择患者");
+  }
+};
+
+const goToRecord = () => {
+  if (selectedRecordId.value) {
+    router.push(`/doctor/report/${selectedRecordId.value}`);
+  } else {
+    alert("请先选择患者");
+  }
+};
+
+const goToImport = () => router.push("/doctor/questionnaire/import");
 </script>
 
 <style scoped>
-/* 页面整体样式优化：简化渐变背景（避免解析报错），保留色彩层次 */
-.doctor-view {
-  padding: 40px 24px;
-  max-width: 1200px;
-  margin: 0 auto;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  /* 简化为单一线性渐变，兼容所有环境，色彩柔和不刺眼 */
-  background: linear-gradient(135deg, #f5fafe 0%, #eaf6fa 100%);
-  min-height: calc(100vh - 40px); /* 占满屏幕高度，布局更饱满 */
-}
-
-/* 标题样式优化：专业配色+间距调整 */
-.doctor-view h1 {
-  color: #1e293b; /* 深灰蓝，专业稳重 */
-  font-size: 28px;
-  font-weight: 600;
-  text-align: center;
-  margin-bottom: 48px;
-  position: relative;
-}
-
-/* 标题下方小横线，增强视觉焦点 */
-.doctor-view h1::after {
-  content: '';
-  display: block;
-  width: 80px;
-  height: 3px;
-  background-color: #3b82f6; /* 医疗蓝，突出专业属性 */
-  margin: 12px auto 0;
-  border-radius: 2px;
-}
-
-/* 卡片容器布局优化：响应式+均匀分布 */
-.function-cards {
+/* 样式完全复用，无修改 */
+.doctor-home {
   display: flex;
-  gap: 32px;
-  margin-top: 32px;
-  flex-wrap: wrap;
-  justify-content: center; /* 水平居中，适配小屏幕 */
+  min-height: 100vh;
+  font-family: "Microsoft YaHei", Arial, sans-serif;
 }
 
-/* 功能卡片样式升级：立体+交互感（去掉backdrop-filter避免解析报错） */
-.card {
-  flex: 1 1 calc(40% - 16px); /* 响应式宽度，最小宽度适配 */
-  min-width: 280px; /* 小屏幕下最小宽度，避免变形 */
-  padding: 32px 24px;
-  background-color: #ffffff; /* 纯色背景，确保兼容性 */
-  border-radius: 12px; /* 大圆角，现代感 */
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08); /* 柔和阴影，立体感 */
-  text-decoration: none;
-  color: #1e293b;
-  transition: all 0.3s ease; /* 平滑过渡，提升交互体验 */
-  border: 1px solid #f0f0f0; /* 细边框，增强轮廓感 */
-  position: relative;
-  overflow: hidden;
+.sidebar {
+  width: 180px;
+  background-color: #1A365D;
+  color: #FFFFFF;
+  padding: 20px 0;
+  box-shadow: 2px 0 4px rgba(0, 0, 0, 0.1);
 }
-
-/* 卡片hover效果：阴影加深+轻微上浮 */
-.card:hover {
-  transform: translateY(-5px); /* 上浮5px，动态感 */
-  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
-  border-color: #3b82f6; /*  hover时边框变蓝，突出选中状态 */
-}
-
-/* 卡片标题样式优化：醒目+间距 */
-.card h3 {
-  font-size: 20px;
-  font-weight: 600;
-  margin-bottom: 12px;
-  color: #3b82f6; /* 主题蓝，突出标题 */
+.sidebar-header {
   display: flex;
   align-items: center;
+  gap: 10px;
+  padding: 0 20px 20px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.2);
 }
-
-/* 标题前小图标（纯CSS实现，无需额外导入） */
-.card h3::before {
-  content: '📋'; /* 图标字符，适配医疗场景 */
-  margin-right: 8px;
-  font-size: 24px;
+.station-icon {
+  font-size: 20px;
 }
-
-/* 第二个卡片图标区分 */
-.card:nth-child(2) h3::before {
-  content: '📤'; /* 导入相关图标 */
-}
-
-/* 卡片描述文字优化：可读性提升 */
-.card p {
-  font-size: 14px;
-  color: #64748b; /* 浅灰色，不抢标题风头 */
-  line-height: 1.6;
+.sidebar-header h1 {
+  font-size: 16px;
+  font-weight: 600;
   margin: 0;
 }
-
-/* 底部渐变装饰，增强细节感 */
-.card::after {
-  content: '';
-  display: block;
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  width: 100%;
-  height: 4px;
-  background: linear-gradient(90deg, #3b82f6, #60a5fa); /* 渐变蓝，现代感 */
+.sidebar-nav {
+  padding: 10px;
+}
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 15px;
+  border-radius: 4px;
+  margin-bottom: 8px;
+  cursor: pointer;
+  transition: background 0.2s;
+  font-size: 14px;
+}
+.nav-item.active {
+  background-color: #2D5B99;
+  font-weight: 500;
+}
+.nav-item:hover:not(.active) {
+  background-color: #244A7C;
+}
+.nav-icon {
+  font-size: 16px;
 }
 
-/* 响应式适配：小屏幕下垂直排列 */
-@media (max-width: 768px) {
-  .function-cards {
-    gap: 24px;
-  }
+.main-content {
+  flex: 1;
+  background-color: #F5F7FA;
+  display: flex;
+  flex-direction: column;
+}
 
-  .card {
-    flex: 1 1 100%; /* 小屏幕下占满宽度 */
-    padding: 28px 20px;
-  }
+.top-bar {
+  height: 50px;
+  background-color: #FFFFFF;
+  border-bottom: 1px solid #E5E9F2;
+  padding: 0 20px;
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+}
+.top-right {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  color: #4E5969;
+  font-size: 14px;
+}
+.notify-icon {
+  font-size: 18px;
+  cursor: pointer;
+}
+.doctor-name {
+  font-weight: 500;
+}
+.department {
+  color: #86909C;
+}
 
-  .doctor-view h1 {
-    font-size: 24px;
-    margin-bottom: 36px;
-  }
+.content-area {
+  padding: 20px 30px;
+}
+.page-title {
+  font-size: 20px;
+  color: #1D2129;
+  margin: 0 0 20px 0;
+}
+.queue-header {
+  margin-bottom: 15px;
+}
+.queue-header h3 {
+  font-size: 16px;
+  color: #1D2129;
+  margin: 0 0 5px 0;
+}
+.queue-header p {
+  color: #86909C;
+  margin: 0;
+  font-size: 14px;
+}
+
+.loading-state, .error-state {
+  padding: 30px;
+  background-color: #FFFFFF;
+  border-radius: 6px;
+  text-align: center;
+  margin-top: 20px;
+}
+.error-state {
+  color: #F5222D;
+  background-color: #FFF1F0;
+}
+
+.queue-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 20px;
+}
+.queue-item {
+  background-color: #FFFFFF;
+  border: 1px solid #E5E9F2;
+  border-radius: 4px;
+  padding: 12px 15px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+  transition: border-color 0.2s;
+}
+.queue-item.first-patient {
+  background-color: #FFF9E8;
+  border-left: 3px solid #FAAD14;
+}
+.queue-item.selected {
+  border-color: #3B82F6;
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.15);
+}
+.queue-item:hover {
+  border-color: #C9CDD4;
+}
+.patient-id {
+  font-size: 14px;
+  color: #4E5969;
+}
+.view-btn {
+  padding: 6px 12px;
+  background-color: #1890FF;
+  color: #FFFFFF;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: background-color 0.2s;
+}
+.view-btn:hover {
+  background-color: #096DD9;
 }
 </style>
