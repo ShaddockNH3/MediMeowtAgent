@@ -9,7 +9,7 @@
       <nav class="sidebar-nav">
         <a 
           class="nav-item" 
-          :class="{ active: $route.path === '/doctor' }"
+          :class="{ active: $route.path === '/doctor/queue' }"
           @click="goToQueue"
         >
           <span class="nav-icon">📋</span>
@@ -126,28 +126,36 @@ onMounted(async () => {
 // 4. 统一事件处理（避免模板中直接操作.value）
 const handlePatientSelect = (recordId: string) => {
   selectedRecordId.value = recordId;
+  // 新增：存入localStorage，供其他页面跳转时使用
+  localStorage.setItem("recentRecordId", recordId);
 };
 
 const handleViewSummary = (recordId: string) => {
   selectedRecordId.value = recordId;
+  localStorage.setItem("recentRecordId", recordId); // 新增：缓存最近选择的患者ID
   router.push(`/doctor/summary/${recordId}`);
 };
 
-// 5. 导航函数：极简+类型安全
-const goToQueue = () => router.push("/doctor");
+// 5. 导航函数：路径对齐+缓存兜底
+const goToQueue = () => router.push("/doctor/queue"); // 修改：匹配路由配置的队列页面
+
 const goToDetailFromSidebar = () => {
-  if (selectedRecordId.value) {
-    router.push(`/doctor/summary/${selectedRecordId.value}`);
+  // 优化：优先用缓存的recordId，再用当前选中的
+  const targetId = selectedRecordId.value || localStorage.getItem("recentRecordId");
+  if (targetId) {
+    router.push(`/doctor/summary/${targetId}`);
   } else {
-    alert("请先选择患者");
+    alert("请先选择患者或从队列中选择");
   }
 };
 
 const goToRecord = () => {
-  if (selectedRecordId.value) {
-    router.push(`/doctor/report/${selectedRecordId.value}`);
+  // 优化：优先用缓存的recordId，再用当前选中的
+  const targetId = selectedRecordId.value || localStorage.getItem("recentRecordId");
+  if (targetId) {
+    router.push(`/doctor/report/${targetId}`);
   } else {
-    alert("请先选择患者");
+    alert("请先选择患者或从队列中选择");
   }
 };
 

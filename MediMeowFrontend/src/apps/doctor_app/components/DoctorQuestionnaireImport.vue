@@ -121,10 +121,30 @@ const doctorInfo = computed(() => {
 const doctorName = computed(() => doctorInfo.value.username);
 const doctorDept = computed(() => doctorInfo.value.department);
 
-/** 侧边栏跳转函数 */
+/** 侧边栏跳转函数 - 修复路径和参数问题 */
 const goToQueue = () => router.push('/doctor/queue');
-const goToDetail = () => router.push('/doctor/summary');
-const goToRecord = () => router.push('/doctor/record');
+
+const goToDetail = () => {
+  // 尝试从localStorage获取最近的患者recordId（若有）
+  const recentRecordId = localStorage.getItem('recentRecordId');
+  if (recentRecordId) {
+    router.push(`/doctor/summary/${recentRecordId}`);
+  } else {
+    errorMsg.value = '请先从患者队列选择患者';
+    setTimeout(() => router.push('/doctor/queue'), 1500);
+  }
+};
+
+const goToRecord = () => {
+  // 尝试从localStorage获取最近的患者recordId（若有）
+  const recentRecordId = localStorage.getItem('recentRecordId');
+  if (recentRecordId) {
+    router.push(`/doctor/report/${recentRecordId}`);
+  } else {
+    errorMsg.value = '请先从患者队列选择患者';
+    setTimeout(() => router.push('/doctor/queue'), 1500);
+  }
+};
 
 /** 返回医生主页 */
 const goBack = () => {

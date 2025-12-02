@@ -201,10 +201,17 @@ const formData = ref({
 // 待诊记录ID
 const recordId = ref('');
 
-/** 侧边栏跳转函数 */
+/** 侧边栏跳转函数 - 修复路径和参数问题 */
 const goToQueue = () => router.push('/doctor/queue');
-const goToDetail = () => router.push('/doctor/summary');
-const goToQuestionnaire = () => router.push('/doctor/questionnaire');
+const goToDetail = () => {
+  if (recordId.value) {
+    router.push(`/doctor/summary/${recordId.value}`);
+  } else {
+    errorMsg.value = '缺少患者记录ID，无法跳转至详情';
+    setTimeout(() => router.push('/doctor/queue'), 1500);
+  }
+};
+const goToQuestionnaire = () => router.push('/doctor/questionnaire/import'); // 修正为有效路径
 
 /** 返回患者详情页 */
 const goBack = () => {

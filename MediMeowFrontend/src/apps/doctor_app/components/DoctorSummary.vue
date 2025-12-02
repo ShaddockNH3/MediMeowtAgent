@@ -215,14 +215,14 @@ const formatTime = (timeStr: string | undefined) => {
   }
 };
 
-// 数据获取函数（增加参数校验）
+// 数据获取函数（修复路由参数名：recordId → record_id）
 const fetchSummary = async () => {
   loading.value = true;
   errorMsg.value = "";
   
   try {
-    // 严格校验路由参数
-    const recordId = route.params.recordId as string;
+    // 严格校验路由参数：使用 snake_case 的 record_id（匹配路由配置）
+    const recordId = route.params.record_id as string;
     if (!recordId || recordId.trim() === "") {
       throw new Error("缺少有效的患者记录ID");
     }
@@ -263,11 +263,11 @@ const fetchSummary = async () => {
   }
 };
 
-// 路由跳转函数（增加安全性校验）
+// 路由跳转函数（修复路由参数名：recordId → record_id）
 const goToQueue = () => router.push("/doctor");
 
 const goToDetailFromSidebar = () => {
-  const recordId = route.params.recordId as string;
+  const recordId = route.params.record_id as string;
   if (recordId) {
     router.push(`/doctor/summary/${recordId}`);
   } else {
@@ -277,7 +277,7 @@ const goToDetailFromSidebar = () => {
 };
 
 const goToRecord = () => {
-  const recordId = route.params.recordId as string;
+  const recordId = route.params.record_id as string;
   if (recordId) {
     router.push(`/doctor/report/${recordId}`);
   } else {

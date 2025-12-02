@@ -74,10 +74,26 @@ const doctorInfo = computed(() => {
 const doctorName = computed(() => doctorInfo.value.username);
 const doctorDept = computed(() => doctorInfo.value.department);
 
-/** 侧边栏跳转函数 */
-const goToDetail = () => router.push('/doctor/summary');
-const goToRecord = () => router.push('/doctor/record');
-const goToQuestionnaire = () => router.push('/doctor/questionnaire');
+/** 侧边栏跳转函数 - 修复路径和参数问题 */
+const goToDetail = () => {
+  if (recordIds.value.length > 0) {
+    router.push(`/doctor/summary/${recordIds.value[0]}`);
+  } else {
+    errorMsg.value = '暂无可用的患者记录，无法跳转至详情';
+  }
+};
+
+const goToRecord = () => {
+  if (recordIds.value.length > 0) {
+    router.push(`/doctor/report/${recordIds.value[0]}`);
+  } else {
+    errorMsg.value = '暂无可用的患者记录，无法跳转至电子病历';
+  }
+};
+
+const goToQuestionnaire = () => {
+  router.push('/doctor/questionnaire/import'); // 修正为有效路径
+};
 
 onMounted(() => {
   fetchQueue();
