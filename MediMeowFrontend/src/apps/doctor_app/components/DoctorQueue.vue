@@ -1,313 +1,579 @@
 <template>
-  <div class="queue-page">
-    <!-- 页面头部（与其他页面统一） -->
-    <div class="page-header">
-      <h2 class="page-title">患者队列</h2>
-      <div class="doctor-info">
-        <span class="doctor-name">{{ doctorName }}</span> | 
-        <span class="department">{{ doctorDept }}</span>
+  <div class="doctor-home">
+    <!-- 左侧侧边栏 -->
+    <aside class="sidebar">
+      <div class="sidebar-header">
+        <span class="station-icon">👨‍⚕️</span>
+        <h1>医生工作站</h1>
       </div>
-    </div>
-
-    <div class="content-wrapper">
-      <!-- 左侧侧边栏（匹配图片样式） -->
-      <aside class="sidebar">
-        <!-- 侧边栏标题（医生工作站） -->
-        <div class="sidebar-header">
-          <i class="icon icon-station">👨‍⚕️</i>
-          <span>医生工作站</span>
-        </div>
-        <!-- 菜单项 -->
-        <div class="sidebar-item active">
-          <i class="icon icon-queue">📋</i>
+      <nav class="sidebar-nav">
+        <a 
+          class="nav-item" 
+          :class="{ 'active': $route.path === '/doctor' }"
+          @click="goToQueue"
+        >
+          <span class="nav-icon">📋</span>
           <span>患者队列</span>
-        </div>
-        <div class="sidebar-item" @click="goToDetail">
-          <i class="icon icon-detail">👤</i>
+        </a>
+        <a 
+          class="nav-item" 
+          :class="{ 'active': $route.path.startsWith('/doctor/summary') }"
+          @click="goToDetailFromSidebar"
+        >
+          <span class="nav-icon">👤</span>
           <span>患者详情</span>
-        </div>
-        <div class="sidebar-item" @click="goToRecord">
-          <i class="icon icon-record">📄</i>
+        </a>
+        <a 
+          class="nav-item" 
+          :class="{ 'active': $route.path.startsWith('/doctor/report') }"
+          @click="goToRecord"
+        >
+          <span class="nav-icon">📄</span>
           <span>电子病历</span>
-        </div>
-        <div class="sidebar-item" @click="goToQuestionnaire">
-          <i class="icon icon-questionnaire">📊</i>
-          <span>问卷管理</span>
-        </div>
-      </aside>
+        </a>
+        <a 
+          class="nav-item" 
+          :class="{ 'active': $route.path === '/doctor/questionnaire/import' }"
+          @click="goToImport"
+        >
+          <span class="nav-icon">📤</span>
+          <span>导入问卷</span>
+        </a>
+      </nav>
+    </aside>
 
-      <!-- 右侧队列内容区 -->
-      <main class="queue-content">
-        <div class="queue-container">
-          <div class="loading" v-if="loading">加载中...</div>
-          <div class="error" v-if="errorMsg">{{ errorMsg }}</div>
-          <ul class="queue-list" v-else>
-            <li v-for="recordId in recordIds" :key="recordId">
-              待诊患者 ID：{{ recordId }}
-              <router-link :to="`/doctor/summary/${recordId}`" class="view-btn">
-                查看病情摘要
-              </router-link>
-            </li>
-          </ul>
+    <!-- 右侧主内容区 -->
+    <main class="main-content">
+      <header class="top-bar">
+        <div class="top-right">
+          <span class="notify-icon">🔔</span>
+          <span class="doctor-name">{{ doctorInfo.username }}</span>
+          <span class="department">| {{ doctorInfo.department }}</span>
         </div>
-      </main>
-    </div>
+      </header>
+
+      <div class="content-area">
+        <h2 class="page-title">患者队列</h2>
+        <div class="queue-header">
+          <h3>待诊患者队列</h3>
+          <p>当前有 {{ patientList.length }} 名患者在排队等候</p>
+        </div>
+
+        <!-- 状态处理：加载中/错误/空列表 -->
+        <div v-if="loading" class="loading-state">
+          <span class="loading-spinner">🔄</span>
+          <p>正在加载待诊患者列表...</p>
+        </div>
+        <div v-else-if="errorMsg" class="error-state">
+          <span class="error-icon">❌</span>
+          <p>{{ errorMsg }}</p>
+          <button class="retry-btn" @click="loadPatientQueue">重试</button>
+        </div>
+        <div v-else-if="patientList.length === 0" class="empty-state">
+          <p>暂无待诊患者</p>
+        </div>
+        
+        <!-- 核心：患者列表 -->
+        <div class="queue-list" v-else>
+          <div 
+            v-for="(patient, index) in patientList" 
+            :key="patient.recordId"
+            class="queue-item"
+            :class="{ 
+              'first-patient': index === 0,
+              'selected': selectedRecordId === patient.recordId
+            }"
+            @click="handlePatientSelect(patient.recordId)"
+          >
+            <div class="patient-info">
+              <span class="patient-name">
+                {{ index + 1 }}. {{ patient.name }} 
+                <span class="patient-gender-age">({{ patient.gender }}/{{ patient.age }}岁)</span>
+              </span>
+              <span class="patient-id-small">记录ID：{{ patient.recordId }}</span>
+              <span class="patient-id-small">患者ID：{{ patient.userId }}</span>
+              <span class="patient-complaint">主诉：{{ patient.chiefComplaint }}</span>
+            </div>
+            <button 
+              class="view-btn" 
+              @click.stop="handleViewSummary(patient.recordId)"
+            >
+              查看病情摘要
+            </button>
+          </div>
+        </div>
+      </div>
+    </main>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue';
-import { useRouter } from 'vue-router';
-import { getDoctorQueue } from '../api/queue';
-import type { DoctorQueueResponse } from '../api/queue';
+import { ref, computed, onMounted } from "vue";
+import { useRouter } from "vue-router";
+// 导入路径已修正为../api/queue
+import { getDoctorQueue, getPatientDetail } from "../api/queue";
+import type { DoctorQueueResponse, PatientDetailResponse } from "../api/queue";
 
+// 患者类型定义
+interface PatientItem {
+  recordId: string;  // 就诊记录ID
+  userId: string;    // 患者用户ID
+  name: string;      // 患者姓名
+  gender: string;    // 性别
+  age: number;       // 年龄
+  chiefComplaint: string; // 主诉
+}
+
+// 响应式状态
 const router = useRouter();
+const patientList = ref<PatientItem[]>([]);
+const selectedRecordId = ref<string>("");
 const loading = ref(false);
-const errorMsg = ref('');
-const recordIds = ref<string[]>([]);
+const errorMsg = ref("");
 
-// 医生信息（与其他页面统一，从localStorage读取）
-const doctorInfo = computed(() => {
-  const info = localStorage.getItem('doctorInfo');
-  return info ? JSON.parse(info) : { username: '张医生', department: '呼吸内科' };
-});
-const doctorName = computed(() => doctorInfo.value.username);
-const doctorDept = computed(() => doctorInfo.value.department);
-
-/** 侧边栏跳转函数 - 修复路径和参数问题 */
-const goToDetail = () => {
-  if (recordIds.value.length > 0) {
-    router.push(`/doctor/summary/${recordIds.value[0]}`);
-  } else {
-    errorMsg.value = '暂无可用的患者记录，无法跳转至详情';
-  }
-};
-
-const goToRecord = () => {
-  if (recordIds.value.length > 0) {
-    router.push(`/doctor/report/${recordIds.value[0]}`);
-  } else {
-    errorMsg.value = '暂无可用的患者记录，无法跳转至电子病历';
-  }
-};
-
-const goToQuestionnaire = () => {
-  router.push('/doctor/questionnaire/import'); // 修正为有效路径
-};
-
-onMounted(() => {
-  fetchQueue();
-});
-
-const fetchQueue = async () => {
-  loading.value = true;
+// 医生信息（从localStorage获取，确保类型安全）
+const doctorInfo = computed((): { username: string; department: string; id: string } => {
   try {
-    const doctorInfoStr = localStorage.getItem('doctorInfo');
-    if (!doctorInfoStr) throw new Error('未登录或医生信息缺失');
-    
-    const doctorInfo = JSON.parse(doctorInfoStr);
-    const userId = doctorInfo.id;
-    if (!userId) throw new Error('医生 ID 不存在');
-
-    const res = await getDoctorQueue(userId);
-
-    if (res.base.code === '10000') {
-      recordIds.value = res.data.record_ids;
-    } else {
-      errorMsg.value = res.base.msg || '获取待诊列表失败';
+    const info = localStorage.getItem("doctorInfo");
+    if (info) {
+      const parsed = JSON.parse(info) as any;
+      return {
+        username: parsed.username || "张医生",
+        department: parsed.department || "呼吸内科",
+        id: parsed.id || ""
+      };
     }
-  } catch (error: any) {
-    errorMsg.value = error.message || error.base?.msg || '网络异常，请重试';
+  } catch (e) {
+    console.error("解析医生信息失败：", e);
+  }
+  // 默认值，确保返回类型一致
+  return { username: "张医生", department: "呼吸内科", id: "" };
+});
+
+// 加载患者队列（核心修正：解决第205行报错）
+const loadPatientQueue = async () => {
+  loading.value = true;
+  errorMsg.value = "";
+  patientList.value = [];
+  
+  try {
+    // 1. 获取医生ID，确保非空
+    const doctorId = doctorInfo.value.id;
+    if (!doctorId) {
+      throw new Error("医生ID获取失败，请重新登录");
+    }
+    
+    // 2. 调用API获取待诊患者的record_ids列表
+    const queueRes: DoctorQueueResponse = await getDoctorQueue(doctorId);
+    
+    // 3. 检查API返回状态
+    if (!queueRes || queueRes.base.code !== "10000") {
+      throw new Error(`获取队列失败：${queueRes?.base?.msg || "未知错误"}`);
+    }
+    
+    // 4. 提取record_ids
+    const recordIds = queueRes?.data?.record_ids || [];
+    
+    // 5. 批量获取每个患者的详细信息
+    if (recordIds.length > 0) {
+      const patientPromises = recordIds.map(async (recordId: string) => {
+        try {
+          const detailRes: PatientDetailResponse = await getPatientDetail(recordId);
+          
+          if (!detailRes || detailRes.base.code !== "10000" || !detailRes.data) {
+            return {
+              recordId,
+              userId: recordId,
+              name: `未知患者(${recordId.slice(-4)})`,
+              gender: "未知",
+              age: 0,
+              chiefComplaint: "无"
+            };
+          }
+          
+          const patientData = detailRes.data;
+          return {
+            recordId,
+            userId: patientData.id,
+            name: patientData.name,
+            gender: patientData.gender,
+            age: patientData.age,
+            chiefComplaint: patientData.chiefComplaint
+          };
+        } catch (e) {
+          console.error(`获取患者${recordId}详情失败：`, e);
+          return {
+            recordId,
+            userId: recordId,
+            name: `未知患者(${recordId.slice(-4)})`,
+            gender: "未知",
+            age: 0,
+            chiefComplaint: "无"
+          };
+        }
+      });
+      
+      // 等待所有请求完成
+      patientList.value = await Promise.all(patientPromises);
+      
+      // 核心修正：解决第205行报错 - 显式获取并校验第一个患者
+      if (patientList.value.length > 0) {
+        const firstPatient = patientList.value[0];
+        // 显式校验firstPatient非空，让TypeScript明确识别
+        if (firstPatient) {
+          selectedRecordId.value = firstPatient.recordId;
+          localStorage.setItem("recentRecordId", selectedRecordId.value);
+        }
+      }
+    }
+  } catch (err: any) {
+    errorMsg.value = err.message || "网络异常，加载失败";
+    console.error("加载患者队列失败：", err);
   } finally {
     loading.value = false;
   }
 };
+
+// 患者选中处理
+const handlePatientSelect = (recordId: string) => {
+  selectedRecordId.value = recordId;
+  localStorage.setItem("recentRecordId", recordId);
+};
+
+// 查看病情摘要（已修正：添加非空校验）
+const handleViewSummary = (recordId: string) => {
+  // 查找患者并显式校验
+  const patient = patientList.value.find(p => p.recordId === recordId);
+  if (!patient) {
+    console.warn(`未找到recordId为${recordId}的患者`);
+    alert("该患者信息不存在，请重试");
+    return;
+  }
+
+  // 安全访问patient属性
+  console.log("[队列页] 点击查看病情摘要：", {
+    recordId,
+    patientName: patient.name,
+    patientUserId: patient.userId
+  });
+
+  selectedRecordId.value = recordId;
+  localStorage.setItem("recentRecordId", recordId);
+  router.push(`/doctor/summary/${recordId}`);
+};
+
+// 路由跳转函数
+const goToQueue = () => router.push("/doctor");
+
+const goToDetailFromSidebar = () => {
+  const targetId = selectedRecordId.value || localStorage.getItem("recentRecordId");
+  if (targetId) {
+    router.push(`/doctor/summary/${targetId}`);
+  } else {
+    alert("请先选择有效的患者");
+    router.push("/doctor");
+  }
+};
+
+const goToRecord = () => {
+  const targetId = selectedRecordId.value || localStorage.getItem("recentRecordId");
+  if (targetId) {
+    router.push(`/doctor/report/${targetId}`);
+  } else {
+    alert("请先选择患者以生成电子病历");
+    router.push("/doctor");
+  }
+};
+
+const goToImport = () => router.push("/doctor/questionnaire/import");
+
+// 页面挂载时加载患者队列
+onMounted(() => {
+  loadPatientQueue();
+});
 </script>
 
 <style scoped>
-/* 页面整体样式（与其他页面统一） */
-.queue-page {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+/* 全局布局 */
+.doctor-home {
+  display: flex;
+  height: 100vh;
+  font-family: "Microsoft YaHei", "PingFang SC", sans-serif;
   background-color: #f5f7fa;
-  min-height: 100vh;
+  overflow: hidden;
 }
 
-/* 页面头部（与其他页面统一） */
-.page-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 16px 24px;
-  background-color: #fff;
-  border-bottom: 1px solid #e5e9f2;
-}
-
-.page-title {
-  font-size: 18px;
-  font-weight: 600;
-  color: #1d2129;
-  margin: 0;
-}
-
-.doctor-info {
-  font-size: 14px;
-  color: #86909c;
-}
-
-/* 内容容器（侧边栏+主内容区） */
-.content-wrapper {
-  display: flex;
-}
-
-/* 左侧侧边栏（匹配图片样式） */
+/* 侧边栏样式 */
 .sidebar {
-  width: 180px;
-  background-color: #0F2E57; /* 图片同款深蓝色背景 */
-  color: #fff;
-  padding: 0;
-  box-shadow: 2px 0 8px rgba(0,0,0,0.1);
+  width: 200px;
+  background-color: #1a365d;
+  color: #ffffff;
+  padding: 20px 0;
+  box-shadow: 2px 0 8px rgba(0, 0, 0, 0.08);
 }
 
-/* 侧边栏标题（医生工作站） */
 .sidebar-header {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 16px 20px;
-  font-size: 16px;
-  font-weight: 600;
-  border-bottom: 1px solid rgba(255,255,255,0.1);
-}
-
-/* 侧边栏菜单项 */
-.sidebar-item {
+  padding: 0 20px 20px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.15);
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 14px 20px;
-  font-size: 14px;
-  cursor: pointer;
-  transition: background-color 0.2s;
 }
 
-/* 选中项高亮（患者队列） */
-.sidebar-item.active {
-  background-color: #1A4B8C; /* 选中项亮蓝色背景 */
+.station-icon {
+  font-size: 24px;
 }
 
-.sidebar-item:hover:not(.active) {
-  background-color: #153A69;
-}
-
-/* 侧边栏图标 */
-.icon {
-  font-size: 18px;
-  width: 20px; /* 固定图标宽度，文字对齐 */
-  text-align: center;
-}
-
-/* 右侧队列内容区 */
-.queue-content {
-  flex: 1;
-  padding: 24px;
-}
-
-/* 队列容器样式 */
-.queue-container {
-  max-width: 800px;
-  margin: 0 auto;
-  padding: 24px;
-  background: linear-gradient(135deg, #f5fafe 0%, #eaf6fa 100%);
-  border-radius: 12px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
-}
-
-/* 加载状态样式 */
-.loading {
-  text-align: center;
-  padding: 60px;
-  color: #666;
+.sidebar-header h1 {
   font-size: 16px;
-  background-color: #f9f9f9;
-  border-radius: 8px;
-}
-
-/* 错误提示样式 */
-.error {
-  text-align: center;
-  padding: 24px;
-  color: #f56c6c;
-  font-size: 16px;
-  background-color: #fff1f0;
-  border-radius: 8px;
-  border: 1px solid #fde2e2;
-}
-
-/* 列表容器样式 */
-.queue-list {
-  list-style: none;
-  padding: 0;
+  font-weight: 600;
   margin: 0;
 }
 
-/* 列表项卡片式设计 */
-.queue-list li {
-  padding: 20px;
-  border-radius: 8px;
-  background-color: #fff;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-  margin-bottom: 16px;
+.sidebar-nav {
+  padding: 20px 10px;
+}
+
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 15px;
+  border-radius: 4px;
+  cursor: pointer;
+  margin-bottom: 8px;
   font-size: 14px;
-  color: #333;
+  transition: background-color 0.2s ease;
+}
+
+.nav-item.active {
+  background-color: #2d5b99;
+}
+
+.nav-item:hover:not(.active) {
+  background-color: #244a7c;
+}
+
+.nav-icon {
+  font-size: 16px;
+}
+
+/* 主内容区 */
+.main-content {
+  flex: 1;
+  overflow-y: auto;
+}
+
+.top-bar {
+  height: 60px;
+  background-color: #ffffff;
+  border-bottom: 1px solid #e5e9f2;
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  padding: 0 30px;
+}
+
+.top-right {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  font-size: 14px;
+}
+
+.notify-icon {
+  font-size: 20px;
+  cursor: pointer;
+  transition: color 0.2s;
+}
+
+.notify-icon:hover {
+  color: #1890ff;
+}
+
+.doctor-name {
+  font-weight: 500;
+  color: #1d2129;
+}
+
+.department {
+  color: #86909c;
+}
+
+.content-area {
+  padding: 30px;
+}
+
+.page-title {
+  font-size: 22px;
+  color: #1d2129;
+  margin: 0 0 25px 0;
+  font-weight: 600;
+}
+
+/* 队列头部 */
+.queue-header {
+  margin-bottom: 20px;
+}
+
+.queue-header h3 {
+  font-size: 16px;
+  color: #1d2129;
+  margin: 0 0 5px 0;
+}
+
+.queue-header p {
+  color: #86909c;
+  margin: 0;
+  font-size: 14px;
+}
+
+/* 状态样式 */
+.loading-state, .error-state, .empty-state {
+  background-color: #ffffff;
+  border-radius: 8px;
+  padding: 40px;
+  text-align: center;
+  margin: 20px 0;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.loading-spinner {
+  font-size: 32px;
+  display: block;
+  margin-bottom: 15px;
+  animation: spin 1.5s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.error-icon {
+  font-size: 32px;
+  color: #f5222d;
+  display: block;
+  margin-bottom: 15px;
+}
+
+.retry-btn {
+  padding: 8px 16px;
+  background-color: #1890ff;
+  color: #ffffff;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  margin-top: 10px;
+  transition: background-color 0.2s;
+}
+
+.retry-btn:hover {
+  background-color: #096dd9;
+}
+
+/* 队列列表 */
+.queue-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.queue-item {
+  background-color: #ffffff;
+  border: 1px solid #e5e9f2;
+  border-radius: 4px;
+  padding: 15px;
   display: flex;
   justify-content: space-between;
-  align-items: center;
-  transition: all 0.3s ease;
+  align-items: flex-start;
+  cursor: pointer;
+  transition: all 0.2s;
 }
 
-.queue-list li:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+.queue-item:hover {
+  border-color: #c9cdd4;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
 }
 
-.queue-list li:last-child {
-  margin-bottom: 0;
+.queue-item.first-patient {
+  background-color: #fff9e8;
+  border-left: 3px solid #faad14;
 }
 
-/* 查看按钮样式 */
+.queue-item.selected {
+  border-color: #3b82f6;
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.15);
+}
+
+/* 患者信息 */
+.patient-info {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  flex: 1;
+  margin-right: 15px;
+}
+
+.patient-name {
+  font-size: 14px;
+  color: #4e5969;
+  font-weight: 500;
+}
+
+.patient-gender-age {
+  font-size: 12px;
+  color: #86909c;
+  font-weight: normal;
+}
+
+.patient-id-small {
+  font-size: 12px;
+  color: #86909c;
+}
+
+.patient-complaint {
+  font-size: 13px;
+  color: #666;
+  margin-top: 5px;
+}
+
+/* 按钮样式 */
 .view-btn {
   padding: 8px 16px;
-  background-color: #409eff;
-  color: #fff;
-  border-radius: 6px;
-  text-decoration: none;
+  background-color: #1890ff;
+  color: #ffffff;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
   font-size: 14px;
-  transition: all 0.3s ease;
+  transition: background-color 0.2s;
+  align-self: center;
 }
 
 .view-btn:hover {
-  background-color: #3086d6;
-  transform: translateY(-1px);
-  box-shadow: 0 2px 8px rgba(64, 158, 255, 0.3);
+  background-color: #096dd9;
 }
 
 /* 响应式适配 */
 @media (max-width: 768px) {
-  .content-wrapper {
-    flex-direction: column;
-  }
   .sidebar {
-    width: 100%;
-    display: flex;
-    flex-wrap: wrap;
+    width: 180px;
   }
-  .sidebar-header {
-    width: 100%;
+  
+  .content-area {
+    padding: 20px;
   }
-  .sidebar-item {
-    flex: 1;
-    justify-content: center;
-    padding: 12px 8px;
+  
+  .queue-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+  
+  .view-btn {
+    align-self: flex-end;
   }
 }
 </style>

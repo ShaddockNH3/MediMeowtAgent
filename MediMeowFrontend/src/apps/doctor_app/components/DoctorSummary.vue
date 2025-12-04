@@ -105,7 +105,7 @@
             <div class="ai-grid">
               <div class="ai-row">
                 <label>主诉：</label>
-                <p>{{ symptomInfo.chiefComplaint }}</p>
+                <div class="markdown-content" v-html="renderedChiefComplaint"></div>
               </div>
               <div class="ai-row">
                 <label>关键症状：</label>
@@ -121,11 +121,11 @@
               </div>
               <div class="ai-row">
                 <label>影像摘要：</label>
-                <p>{{ symptomInfo.imageSummary || "无影像数据" }}</p>
+                <div class="markdown-content" v-html="renderedImageSummary"></div>
               </div>
               <div class="ai-row">
                 <label>重要备注：</label>
-                <p>{{ symptomInfo.importantNotes }}</p>
+                <div class="markdown-content" v-html="renderedImportantNotes"></div>
               </div>
               <div class="ai-row">
                 <label>提交ID：</label>
@@ -154,6 +154,8 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from "vue";
 import { useRoute, useRouter } from "vue-router";
+import MarkdownIt from "markdown-it";
+import xss from "xss";
 
 // 拆分导入：值导入（函数）+ 类型导入（接口/类型别名）
 import { getDiseaseSummary } from "../api/summary";
@@ -166,6 +168,14 @@ const router = useRouter();
 // 响应式状态
 const loading = ref(true);
 const errorMsg = ref("");
+
+// 初始化Markdown解析器（适配中文排版/换行/链接）
+const md = new MarkdownIt({
+  html: true,        // 允许解析HTML标签
+  linkify: true,     // 自动识别链接（如手机号/网址）
+  typographer: true, // 优化中文排版（自动替换标点、换行）
+  breaks: true,      // 换行符转换为<br>标签
+});
 
 // 医生信息（从localStorage读取，避免JSON.parse类型警告）
 const doctorInfo = computed(() => {
@@ -199,6 +209,45 @@ const symptomInfo = ref({
   isDeptMatch: false,
 });
 
+/**
+ * 预处理Markdown文本：彻底清理所有非标准/残留符号
+ * @param text 原始文本
+ * @returns 无符号残留的纯文本
+ */
+const preprocessMarkdown = (text: string): string => {
+  if (!text) return "暂无";
+  return text
+    // 1. 清理“**+标点”（如“核心症状**：”→“核心症状：”）
+    .replace(/\*\*([：:，,。.])/g, "$1")
+    // 2. 清理“***+内容”（如“***症状细节”→“症状细节”）
+    .replace(/\*\*\*([^:]+)/g, "$1")
+    // 3. 清理孤立的**（无匹配的加粗符号）
+    .replace(/\*\*/g, "")
+    // 4. 清理单行反引号（无意义代码块）
+    .replace(/`([^`]+)`/g, "$1")
+    // 5. 修复换行符
+    .replace(/\\n/g, "\n")
+    // 6. 移除重复换行
+    .replace(/\n{2,}/g, "\n");
+};
+
+// Markdown解析计算属性（彻底清理符号）
+const renderedChiefComplaint = computed(() => {
+  const rawText = symptomInfo.value.chiefComplaint;
+  const processedText = preprocessMarkdown(rawText);
+  return xss(md.render(processedText));
+});
+const renderedImageSummary = computed(() => {
+  const rawText = symptomInfo.value.imageSummary || "无影像数据";
+  const processedText = preprocessMarkdown(rawText);
+  return xss(md.render(processedText));
+});
+const renderedImportantNotes = computed(() => {
+  const rawText = symptomInfo.value.importantNotes;
+  const processedText = preprocessMarkdown(rawText);
+  return xss(md.render(processedText));
+});
+
 // 时间格式化工具（处理空值）
 const formatTime = (timeStr: string | undefined) => {
   if (!timeStr) return "未知";
@@ -227,7 +276,7 @@ const fetchSummary = async () => {
       throw new Error("缺少有效的患者记录ID");
     }
 
-    // 调用API并校验响应
+    // 调用API并校验响应（API层已补充Authorization请求头）
     const res: SummaryResponse = await getDiseaseSummary(recordId);
     if (!res || res.base.code !== "10000") {
       throw new Error(res?.base?.msg || "获取病情摘要失败");
@@ -290,7 +339,6 @@ const goToImport = () => router.push("/doctor/questionnaire/import");
 
 // 页面挂载时加载数据（确保DOM就绪）
 onMounted(() => {
-  // 延迟执行避免DOM渲染冲突
   setTimeout(fetchSummary, 100);
 });
 </script>
@@ -305,7 +353,6 @@ onMounted(() => {
   overflow: hidden;
 }
 
-/* 左侧侧边栏样式 */
 .sidebar {
   width: 200px;
   background-color: #1a365d;
@@ -360,7 +407,6 @@ onMounted(() => {
   font-size: 16px;
 }
 
-/* 右侧主内容区样式 */
 .main-content {
   flex: 1;
   overflow-y: auto;
@@ -402,7 +448,6 @@ onMounted(() => {
   color: #86909c;
 }
 
-/* 内容区域样式 */
 .content-area {
   padding: 30px;
 }
@@ -414,7 +459,6 @@ onMounted(() => {
   font-weight: 600;
 }
 
-/* 加载/错误状态样式 */
 .loading-state, .error-state {
   background-color: #ffffff;
   border-radius: 8px;
@@ -458,7 +502,6 @@ onMounted(() => {
   background-color: #096dd9;
 }
 
-/* 摘要容器样式 */
 .summary-container {
   display: flex;
   flex-direction: column;
@@ -492,7 +535,6 @@ onMounted(() => {
   color: #1890ff;
 }
 
-/* 基本信息卡片样式 */
 .basic-card .info-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
@@ -517,7 +559,6 @@ onMounted(() => {
   font-size: 14px;
 }
 
-/* AI分析卡片样式 */
 .ai-card .ai-grid {
   display: flex;
   flex-direction: column;
@@ -534,6 +575,31 @@ onMounted(() => {
   font-weight: 500;
   color: #4e5969;
   font-size: 14px;
+}
+
+/* Markdown渲染样式（适配加粗/列表/行高） */
+.markdown-content {
+  color: #1d2129;
+  line-height: 1.8;
+  font-size: 14px;
+  margin: 0;
+}
+.markdown-content strong {
+  color: #1a365d;
+  font-weight: 600;
+}
+.markdown-content em {
+  color: #4e5969;
+}
+.markdown-content ul {
+  padding-left: 20px;
+  margin: 4px 0;
+}
+.markdown-content li {
+  margin: 4px 0;
+}
+.markdown-content br {
+  line-height: 2;
 }
 
 .ai-row p {
@@ -578,7 +644,6 @@ onMounted(() => {
   color: #f5222d;
 }
 
-/* 按钮组样式 */
 .btn-group {
   display: flex;
   justify-content: flex-end;
