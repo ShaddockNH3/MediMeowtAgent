@@ -353,6 +353,8 @@ class QuestionnaireSubmitRequest(BaseModel):
     department_id: str
     answers: dict
     file_id: Optional[List[str]] = None
+    height: Optional[int] = None  # 身高(cm)
+    weight: Optional[int] = None  # 体重(kg)
 
 @router.post("/submit")
 async def submit_questionnaire(
@@ -369,6 +371,8 @@ async def submit_questionnaire(
     department_id = body.department_id
     answers = body.answers
     file_id = body.file_id
+    height = body.height
+    weight = body.weight
 
     # 验证必填字段
     if not questionnaire_id:
@@ -385,6 +389,8 @@ async def submit_questionnaire(
         department_id=department_id,
         answers=answers,
         file_ids=file_id,
+        height=height,
+        weight=weight,
         status="pending"
     )
     db.add(submission)
@@ -509,6 +515,8 @@ async def get_questionnaire_record(
 
     if submission:
         response_data["submission_id"] = submission.id
+        response_data["height"] = submission.height
+        response_data["weight"] = submission.weight
 
         # 获取问卷信息以获取问题详情
         questionnaire = db.query(Questionnaire).filter(

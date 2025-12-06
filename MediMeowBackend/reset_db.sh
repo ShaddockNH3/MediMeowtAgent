@@ -57,6 +57,20 @@ echo ""
 echo "✅ 数据库重置完成！"
 echo ""
 
+# 如果 alembic 没有创建表，作为回退执行 init.sql（确保 init.sql 在同一目录）
+echo "🔁 检查核心表是否存在（回退检查）..."
+if ! mysql -h"$DB_HOST" -P"$DB_PORT" -u"$DB_USER" -p"$DB_PASS" -e "USE $DB_NAME; SHOW TABLES LIKE 'departments'" | grep -q departments; then
+    echo "⚠️  未检测到核心表，尝试执行 init.sql 来创建表结构..."
+    if [ -f "./init.sql" ]; then
+        mysql -h"$DB_HOST" -P"$DB_PORT" -u"$DB_USER" -p"$DB_PASS" < ./init.sql
+        echo "✅ init.sql 执行完成"
+    else
+        echo "❌ 找不到 init.sql，无法回退创建表。请手动运行 init.sql 或修复 Alembic 迁移。"
+    fi
+else
+    echo "✅ 核心表已存在，无需回退。"
+fi
+
 # 显示统计信息
 echo "📊 数据统计:"
 mysql -h"$DB_HOST" -P"$DB_PORT" -u"$DB_USER" -p"$DB_PASS" "$DB_NAME" -e "
