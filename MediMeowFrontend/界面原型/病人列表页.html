@@ -1,0 +1,388 @@
+
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>患者管理 - 医生工作站系统</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://code.iconify.design/3/3.1.1/iconify.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+  
+  <style>
+    body {
+      background: #ECF0F1;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      color: #5D6D7E;
+    }
+    
+    .app-container {
+      max-width: 1440px;
+      margin: 0 auto;
+      display: flex;
+      min-height: 100vh;
+    }
+    
+    .sidebar {
+      width: 240px;
+      background: #34495E;
+      color: white;
+      padding: 20px 0;
+    }
+    
+    .main-content {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+    }
+    
+    .top-bar {
+      height: 56px;
+      background: white;
+      border-bottom: 1px solid #E5E7EB;
+      padding: 0 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    
+    .content-wrap {
+      flex: 1;
+      padding: 20px;
+      background: #F8FAFC;
+    }
+    
+    .card {
+      background: white;
+      border-radius: 8px;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+      padding: 24px;
+      margin-bottom: 20px;
+    }
+    
+    .status-badge {
+      display: inline-block;
+      padding: 3px 8px;
+      border-radius: 12px;
+      font-size: 12px;
+      font-weight: 500;
+    }
+    
+    .status-emergency { background: #FEF2F2; color: #E74C3C; border: 1px solid #FECACA; }
+    .status-followup { background: #FFFBEB; color: #F39C12; border: 1px solid #FDE68A; }
+    .status-stable { background: #F0FDF4; color: #27AE60; border: 1px solid #BBF7D0; }
+    
+    .nav-link.active {
+      background: rgba(44, 125, 177, 0.2);
+      border-left: 4px solid #2C7DB1;
+    }
+    
+    .table-container {
+      overflow-x: auto;
+    }
+    
+    .patient-table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    
+    .patient-table th {
+      background: #F1F5F9;
+      text-align: left;
+      padding: 12px 16px;
+      font-weight: 600;
+      color: #34495E;
+      border-bottom: 2px solid #E5E7EB;
+    }
+    
+    .patient-table td {
+      padding: 16px;
+      border-bottom: 1px solid #E5E7EB;
+    }
+    
+    .patient-table tr:hover {
+      background: #F9FAFB;
+    }
+  </style>
+</head>
+<body>
+  <div class="app-container">
+    <!-- 左侧导航栏 -->
+    <div class="sidebar">
+      <div class="px-4 py-6">
+        <span class="iconify text-3xl" data-icon="mdi:doctor"></span>
+        <h1 class="text-xl font-bold mt-4">医生工作站</h1>
+      </div>
+      
+      <nav class="mt-8">
+        <a href="#" class="nav-link block py-3 px-6 hover:bg-gray-700"><span class="iconify mr-3" data-icon="mdi:account-group"></span> 患者管理</a>
+        <a href="#" class="nav-link block py-3 px-6 hover:bg-gray-700"><span class="iconify mr-3" data-icon="mdi:card-account-details"></span> 病历详情</a>
+        <a href="#" class="nav-link block py-3 px-6 hover:bg-gray-700"><span class="iconify mr-3" data-icon="mdi:stethoscope"></span> 诊断工具</a>
+        <a href="#" class="nav-link block py-3 px-6 hover:bg-gray-700"><span class="iconify mr-3" data-icon="mdi:chart-line"></span> 统计分析</a>
+        <a href="#" class="nav-link block py-3 px-6 hover:bg-gray-700"><span class="iconify mr-3" data-icon="mdi:cog"></span> 系统设置</a>
+      </nav>
+    </div>
+    
+    <div class="main-content">
+      <!-- 顶部状态栏 -->
+      <div class="top-bar">
+        <div class="flex items-center">
+          <h2 class="text-xl font-semibold text-gray-800">患者管理</h2>
+        </div>
+        
+        <div class="flex items-center space-x-5">
+          <span class="iconify text-xl text-gray-500 cursor-pointer" data-icon="mdi:bell-outline"></span>
+          <div class="flex items-center">
+            <span class="iconify mr-2 text-gray-500" data-icon="mdi:account-circle"></span>
+            <span class="font-medium">张医生</span>
+            <span class="ml-3 text-gray-400">|</span>
+            <span class="ml-3 text-gray-500">心血管内科</span>
+          </div>
+        </div>
+      </div>
+      
+      <!-- 主内容区 -->
+      <div class="content-wrap">
+        <!-- 搜索和筛选区域 -->
+        <div class="card">
+          <div class="flex flex-wrap items-center gap-4">
+            <div class="flex-1">
+              <div class="relative">
+                <span class="iconify absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" data-icon="mdi:magnify"></span>
+                <input 
+                  type="text" 
+                  class="w-full pl-10 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="搜索患者姓名、病历号或手机号"
+                >
+              </div>
+            </div>
+            
+            <div class="flex space-x-3">
+              <select class="px-4 py-3 border border-gray-300 rounded-lg bg-white">
+                <option>全部状态</option>
+                <option>紧急</option>
+                <option>待随访</option>
+                <option>稳定</option>
+              </select>
+              
+              <button class="px-4 py-3 bg-blue-100 text-blue-700 rounded-lg font-medium flex items-center">
+                <span class="iconify mr-2" data-icon="mdi:filter"></span>
+                筛选
+              </button>
+              
+              <button class="px-4 py-3 bg-blue-600 text-white rounded-lg font-medium flex items-center">
+                <span class="iconify mr-2" data-icon="mdi:plus"></span>
+                添加患者
+              </button>
+            </div>
+          </div>
+        </div>
+        
+        <!-- 患者列表 -->
+        <div class="card">
+          <div class="flex justify-between items-center mb-6">
+            <h3 class="text-lg font-semibold text-gray-800">患者列表</h3>
+            <div class="text-gray-500">共 32 位患者</div>
+          </div>
+          
+          <div class="table-container">
+            <table class="patient-table">
+              <thead>
+                <tr>
+                  <th>患者姓名</th>
+                  <th>病历号</th>
+                  <th>性别</th>
+                  <th>年龄</th>
+                  <th>联系电话</th>
+                  <th>最后就诊</th>
+                  <th>状态</th>
+                  <th>操作</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>
+                    <div class="flex items-center">
+                      <div class="mr-3 bg-blue-100 rounded-full w-8 h-8 flex items-center justify-center">
+                        <span class="iconify text-blue-600" data-icon="mdi:account"></span>
+                      </div>
+                      <div>李建国</div>
+                    </div>
+                  </td>
+                  <td>M20231105001</td>
+                  <td>男</td>
+                  <td>68</td>
+                  <td>138****5678</td>
+                  <td>2025-11-02</td>
+                  <td>
+                    <span class="status-badge status-emergency">
+                      <span class="iconify mr-1 align-middle" data-icon="mdi:alert-circle"></span>
+                      紧急
+                    </span>
+                  </td>
+                  <td>
+                    <button class="text-blue-600 hover:text-blue-800 font-medium">
+                      查看详情
+                    </button>
+                  </td>
+                </tr>
+                
+                <tr>
+                  <td>
+                    <div class="flex items-center">
+                      <div class="mr-3 bg-purple-100 rounded-full w-8 h-8 flex items-center justify-center">
+                        <span class="iconify text-purple-600" data-icon="mdi:account"></span>
+                      </div>
+                      <div>王淑华</div>
+                    </div>
+                  </td>
+                  <td>M20231104025</td>
+                  <td>女</td>
+                  <td>55</td>
+                  <td>139****1234</td>
+                  <td>2025-11-01</td>
+                  <td>
+                    <span class="status-badge status-followup">
+                      <span class="iconify mr-1 align-middle" data-icon="mdi:calendar-clock"></span>
+                      待随访
+                    </span>
+                  </td>
+                  <td>
+                    <button class="text-blue-600 hover:text-blue-800 font-medium">
+                      查看详情
+                    </button>
+                  </td>
+                </tr>
+                
+                <tr>
+                  <td>
+                    <div class="flex items-center">
+                      <div class="mr-3 bg-green-100 rounded-full w-8 h-8 flex items-center justify-center">
+                        <span class="iconify text-green-600" data-icon="mdi:account"></span>
+                      </div>
+                      <div>赵明</div>
+                    </div>
+                  </td>
+                  <td>M20231028015</td>
+                  <td>男</td>
+                  <td>42</td>
+                  <td>137****8765</td>
+                  <td>2025-10-30</td>
+                  <td>
+                    <span class="status-badge status-stable">
+                      <span class="iconify mr-1 align-middle" data-icon="mdi:check-circle"></span>
+                      稳定
+                    </span>
+                  </td>
+                  <td>
+                    <button class="text-blue-600 hover:text-blue-800 font-medium">
+                      查看详情
+                    </button>
+                  </td>
+                </tr>
+                
+                <tr>
+                  <td>
+                    <div class="flex items-center">
+                      <div class="mr-3 bg-pink-100 rounded-full w-8 h-8 flex items-center justify-center">
+                        <span class="iconify text-pink-600" data-icon="mdi:account"></span>
+                      </div>
+                      <div>陈晓梅</div>
+                    </div>
+                  </td>
+                  <td>M20231102032</td>
+                  <td>女</td>
+                  <td>37</td>
+                  <td>136****4321</td>
+                  <td>2025-10-29</td>
+                  <td>
+                    <span class="status-badge status-stable">
+                      <span class="iconify mr-1 align-middle" data-icon="mdi:check-circle"></span>
+                      稳定
+                    </span>
+                  </td>
+                  <td>
+                    <button class="text-blue-600 hover:text-blue-800 font-medium">
+                      查看详情
+                    </button>
+                  </td>
+                </tr>
+                
+                <tr>
+                  <td>
+                    <div class="flex items-center">
+                      <div class="mr-3 bg-orange-100 rounded-full w-8 h-8 flex items-center justify-center">
+                        <span class="iconify text-orange-600" data-icon="mdi:account"></span>
+                      </div>
+                      <div>刘德华</div>
+                    </div>
+                  </td>
+                  <td>M20231101011</td>
+                  <td>男</td>
+                  <td>72</td>
+                  <td>135****6543</td>
+                  <td>2025-11-04</td>
+                  <td>
+                    <span class="status-badge status-emergency">
+                      <span class="iconify mr-1 align-middle" data-icon="mdi:alert-circle"></span>
+                      紧急
+                    </span>
+                  </td>
+                  <td>
+                    <button class="text-blue-600 hover:text-blue-800 font-medium">
+                      查看详情
+                    </button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          
+          <!-- 分页控制 -->
+          <div class="mt-8 flex justify-between items-center">
+            <div class="text-gray-500">显示 1-5 条，共 32 条</div>
+            <div class="flex space-x-2">
+              <button class="px-4 py-2 border border-gray-300 rounded-lg">
+                上一页
+              </button>
+              <button class="px-4 py-2 bg-blue-600 text-white rounded-lg">1</button>
+              <button class="px-4 py-2 border border-gray-300 rounded-lg">2</button>
+              <button class="px-4 py-2 border border-gray-300 rounded-lg">3</button>
+              <button class="px-4 py-2 border border-gray-300 rounded-lg">...</button>
+              <button class="px-4 py-2 border border-gray-300 rounded-lg">
+                下一页
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <script>
+    // 简单的搜索功能演示
+    document.querySelector('input[type="text"]').addEventListener('input', function(e) {
+      const searchTerm = e.target.value.toLowerCase();
+      const rows = document.querySelectorAll('.patient-table tbody tr');
+      
+      rows.forEach(row => {
+        const name = row.querySelector('td:first-child').textContent.toLowerCase();
+        if (name.includes(searchTerm)) {
+          row.style.display = '';
+        } else {
+          row.style.display = 'none';
+        }
+      });
+    });
+    
+    // 详情查看功能
+    document.querySelectorAll('.patient-table button').forEach(button => {
+      button.addEventListener('click', function() {
+        const row = this.closest('tr');
+        const patientName = row.querySelector('td:first-child').textContent.trim();
+        alert(`将跳转到 ${patientName} 的详细病历页面`);
+      });
+    });
+  </script>
+</body>
+</html>

@@ -35,6 +35,11 @@ class MedicalAIServiceStub(object):
         Args:
             channel: A grpc.Channel.
         """
+        self.ProcessMedicalAnalysisSync = channel.unary_unary(
+                '/medical_ai.MedicalAIService/ProcessMedicalAnalysisSync',
+                request_serializer=medical__ai__pb2.AnalysisRequest.SerializeToString,
+                response_deserializer=medical__ai__pb2.AnalysisReport.FromString,
+                _registered_method=True)
         self.ProcessMedicalAnalysis = channel.unary_stream(
                 '/medical_ai.MedicalAIService/ProcessMedicalAnalysis',
                 request_serializer=medical__ai__pb2.AnalysisRequest.SerializeToString,
@@ -46,8 +51,16 @@ class MedicalAIServiceServicer(object):
     """4. gRPC服务接口
     """
 
+    def ProcessMedicalAnalysisSync(self, request, context):
+        """非流式（同步）接口 - 推荐使用
+        """
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
     def ProcessMedicalAnalysis(self, request, context):
-        """Missing associated documentation comment in .proto file."""
+        """流式接口 - 保留用于特殊场景
+        """
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
@@ -55,6 +68,11 @@ class MedicalAIServiceServicer(object):
 
 def add_MedicalAIServiceServicer_to_server(servicer, server):
     rpc_method_handlers = {
+            'ProcessMedicalAnalysisSync': grpc.unary_unary_rpc_method_handler(
+                    servicer.ProcessMedicalAnalysisSync,
+                    request_deserializer=medical__ai__pb2.AnalysisRequest.FromString,
+                    response_serializer=medical__ai__pb2.AnalysisReport.SerializeToString,
+            ),
             'ProcessMedicalAnalysis': grpc.unary_stream_rpc_method_handler(
                     servicer.ProcessMedicalAnalysis,
                     request_deserializer=medical__ai__pb2.AnalysisRequest.FromString,
@@ -71,6 +89,33 @@ def add_MedicalAIServiceServicer_to_server(servicer, server):
 class MedicalAIService(object):
     """4. gRPC服务接口
     """
+
+    @staticmethod
+    def ProcessMedicalAnalysisSync(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/medical_ai.MedicalAIService/ProcessMedicalAnalysisSync',
+            medical__ai__pb2.AnalysisRequest.SerializeToString,
+            medical__ai__pb2.AnalysisReport.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
 
     @staticmethod
     def ProcessMedicalAnalysis(request,

@@ -124,16 +124,45 @@ async def get_summary(
         "username": user.username,
         "created_at": user.created_at.strftime("%Y-%m-%d %H:%M:%S") if user.created_at else None,
         "updated_at": user.updated_at.strftime("%Y-%m-%d %H:%M:%S") if user.updated_at else None,
-        "deleted_at": user.deleted_at.strftime("%Y-%m-%d %H:%M:%S") if user.deleted_at else None
+        "deleted_at": user.deleted_at.strftime("%Y-%m-%d %H:%M:%S") if user.deleted_at else None,
+        "gender": user.gender,
+        "birth": user.birth
     }
+    
+    # Calculate Age
+    from datetime import datetime
+    age_display = "未知"
+    if user.birth:
+        try:
+            # Assumes YYYY-MM-DD format from frontend input
+            birth_date = datetime.strptime(str(user.birth), "%Y-%m-%d")
+            today = datetime.now()
+            age = today.year - birth_date.year - ((today.month, today.day) < (birth_date.month, birth_date.day))
+            age_display = f"{age}岁"
+        except Exception:
+            pass
+            
+    user_info["age"] = age_display
     
     ai_result = submission.ai_result if submission and submission.ai_result else {}
     ai_result["submission_id"] = record.submission_id
     
+    # 获取问卷提交时间
+    submit_time = None
+    if submission and submission.submit_time:
+        submit_time = submission.submit_time.strftime("%Y-%m-%d %H:%M:%S")
+    
+    # 获取身高体重
+    height = submission.height if submission else None
+    weight = submission.weight if submission else None
+    
     return success_response(
         data={
             "user": user_info,
-            "ai_result": ai_result
+            "ai_result": ai_result,
+            "height": height,
+            "weight": weight,
+            "time": submit_time
         }
     )
 

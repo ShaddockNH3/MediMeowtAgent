@@ -1,0 +1,679 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>智能问诊系统 - 后台管理</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://code.iconify.design/3/3.1.1/iconify.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  
+  <style>
+    body {
+      background: #1E293B;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      color: #E2E8F0;
+    }
+    
+    .app-container {
+      max-width: 1920px;
+      margin: 0 auto;
+      display: flex;
+      min-height: 100vh;
+    }
+    
+    .sidebar {
+      width: 240px;
+      background: #0F172A;
+      color: #CBD5E1;
+      padding: 20px 0;
+    }
+    
+    .main-content {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+    }
+    
+    .top-bar {
+      height: 56px;
+      background: #1E293B;
+      border-bottom: 1px solid #334155;
+      padding: 0 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    
+    .content-wrap {
+      flex: 1;
+      padding: 20px;
+      background: #1E293B;
+      display: flex;
+      flex-direction: column;
+    }
+    
+    .card {
+      background: #334155;
+      border-radius: 8px;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      padding: 24px;
+      margin-bottom: 20px;
+      border: 1px solid #475569;
+    }
+    
+    .tab-header {
+      display: flex;
+      border-bottom: 1px solid #475569;
+      padding-bottom: 12px;
+      margin-bottom: 20px;
+    }
+    
+    .tab-item {
+      padding: 8px 16px;
+      margin-right: 12px;
+      border-radius: 4px;
+      cursor: pointer;
+      color: #94A3B8;
+    }
+    
+    .tab-item.active {
+      background: #2563EB;
+      color: white;
+      font-weight: 500;
+    }
+    
+    .section-title {
+      display: flex;
+      align-items: center;
+      padding-bottom: 12px;
+      border-bottom: 1px solid #475569;
+      margin-bottom: 20px;
+      color: #F1F5F9;
+      font-weight: 600;
+    }
+    
+    .stat-card {
+      background: #475569;
+      border-radius: 8px;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      border-left: 4px solid #2563EB;
+    }
+    
+    .stat-value {
+      font-size: 28px;
+      font-weight: 700;
+      margin: 10px 0;
+      color: #F8FAFC;
+    }
+    
+    .stat-label {
+      font-size: 14px;
+      color: #94A3B8;
+    }
+    
+    .stat-change {
+      display: flex;
+      align-items: center;
+      font-size: 14px;
+      margin-top: 8px;
+    }
+    
+    .positive {
+      color: #10B981;
+    }
+    
+    .negative {
+      color: #EF4444;
+    }
+    
+    .chart-container {
+      height: 300px;
+      position: relative;
+    }
+    
+    .data-table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    
+    .data-table th {
+      text-align: left;
+      padding: 12px 16px;
+      border-bottom: 1px solid #475569;
+      color: #94A3B8;
+      font-weight: 500;
+    }
+    
+    .data-table td {
+      padding: 12px 16px;
+      border-bottom: 1px solid #475569;
+      color: #E2E8F0;
+    }
+    
+    .data-table tr:hover {
+      background: #475569;
+    }
+    
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 500;
+    }
+    
+    .status-active {
+      background: #10B98120;
+      color: #10B981;
+    }
+    
+    .status-warning {
+      background: #F59E0B20;
+      color: #F59E0B;
+    }
+    
+    .status-error {
+      background: #EF444420;
+      color: #EF4444;
+    }
+    
+    .btn {
+      padding: 8px 16px;
+      border-radius: 4px;
+      font-weight: 500;
+      cursor: pointer;
+      border: none;
+      transition: all 0.2s;
+    }
+    
+    .btn-primary {
+      background: #2563EB;
+      color: white;
+    }
+    
+    .btn-primary:hover {
+      background: #1D4ED8;
+    }
+    
+    .btn-secondary {
+      background: #475569;
+      color: #E2E8F0;
+      border: 1px solid #64748B;
+    }
+    
+    .btn-secondary:hover {
+      background: #64748B;
+    }
+    
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+    }
+    
+    .grid-3 {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 20px;
+    }
+    
+    .grid-4 {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr 1fr;
+      gap: 20px;
+    }
+    
+    .nav-link {
+      display: flex;
+      align-items: center;
+      padding: 12px 16px;
+      color: #94A3B8;
+      transition: all 0.2s;
+    }
+    
+    .nav-link:hover, .nav-link.active {
+      background: #1E293B;
+      color: #E2E8F0;
+      border-left: 3px solid #2563EB;
+    }
+    
+    .nav-link .iconify {
+      margin-right: 12px;
+      font-size: 20px;
+    }
+    
+    .alert {
+      display: flex;
+      align-items: center;
+      padding: 12px 16px;
+      border-radius: 8px;
+      margin-bottom: 16px;
+    }
+    
+    .alert-warning {
+      background: #FEF3C7;
+      color: #92400E;
+      border: 1px solid #F59E0B;
+    }
+    
+    .alert-info {
+      background: #DBEAFE;
+      color: #1E40AF;
+      border: 1px solid #3B82F6;
+    }
+  </style>
+</head>
+<body>
+  <div class="app-container">
+    <!-- 左侧导航栏 -->
+    <div class="sidebar">
+      <div class="px-4 py-6">
+        <span class="iconify text-3xl text-blue-500" data-icon="mdi:cog"></span>
+        <h1 class="text-xl font-bold mt-4">系统管理后台</h1>
+      </div>
+      
+      <nav class="mt-8">
+        <a href="#" class="nav-link active">
+          <span class="iconify" data-icon="mdi:view-dashboard"></span>
+          仪表盘
+        </a>
+        <a href="#" class="nav-link">
+          <span class="iconify" data-icon="mdi:account-group"></span>
+          用户管理
+        </a>
+        <a href="#" class="nav-link">
+          <span class="iconify" data-icon="mdi:doctor"></span>
+          医生管理
+        </a>
+        <a href="#" class="nav-link">
+          <span class="iconify" data-icon="mdi:file-document-multiple"></span>
+          病历管理
+        </a>
+        <a href="#" class="nav-link">
+          <span class="iconify" data-icon="mdi:robot"></span>
+          AI模型管理
+        </a>
+        <a href="#" class="nav-link">
+          <span class="iconify" data-icon="mdi:chart-bar"></span>
+          数据统计
+        </a>
+        <a href="#" class="nav-link">
+          <span class="iconify" data-icon="mdi:shield-check"></span>
+          权限管理
+        </a>
+        <a href="#" class="nav-link">
+          <span class="iconify" data-icon="mdi:cog"></span>
+          系统设置
+        </a>
+      </nav>
+    </div>
+    
+    <div class="main-content">
+      <!-- 顶部状态栏 -->
+      <div class="top-bar">
+        <div class="flex items-center">
+          <h2 class="text-xl font-semibold">系统管理控制台</h2>
+        </div>
+        
+        <div class="flex items-center space-x-5">
+          <div class="relative">
+            <span class="iconify text-xl text-gray-400 cursor-pointer" data-icon="mdi:bell-outline"></span>
+            <span class="absolute -top-1 -right-1 bg-red-500 text-white rounded-full w-4 h-4 text-xs flex items-center justify-center">3</span>
+          </div>
+          <div class="flex items-center">
+            <span class="iconify mr-2 text-gray-400" data-icon="mdi:account-circle"></span>
+            <span class="font-medium">管理员</span>
+          </div>
+        </div>
+      </div>
+      
+      <!-- 主内容区 -->
+      <div class="content-wrap">
+        <!-- 标签导航 -->
+        <div class="tab-header">
+          <div class="tab-item active">系统概览</div>
+          <div class="tab-item">实时监控</div>
+          <div class="tab-item">模型管理</div>
+          <div class="tab-item">数据报表</div>
+        </div>
+        
+        <!-- 警告信息 -->
+        <div class="alert alert-warning">
+          <span class="iconify mr-2" data-icon="mdi:alert-circle"></span>
+          系统检测到模型响应时间异常，平均响应时间超过3秒，请检查服务器状态。
+        </div>
+        
+        <!-- 统计卡片 -->
+        <div class="grid-4">
+          <div class="stat-card">
+            <span class="iconify text-blue-400 text-xl" data-icon="mdi:account-group"></span>
+            <div class="stat-value">1,284</div>
+            <div class="stat-label">今日活跃用户</div>
+            <div class="stat-change positive">
+              <span class="iconify mr-1" data-icon="mdi:trending-up"></span>
+              +12.5% 较昨日
+            </div>
+          </div>
+          
+          <div class="stat-card">
+            <span class="iconify text-green-400 text-xl" data-icon="mdi:stethoscope"></span>
+            <div class="stat-value">327</div>
+            <div class="stat-label">今日问诊数量</div>
+            <div class="stat-change positive">
+              <span class="iconify mr-1" data-icon="mdi:trending-up"></span>
+              +8.3% 较昨日
+            </div>
+          </div>
+          
+          <div class="stat-card">
+            <span class="iconify text-purple-400 text-xl" data-icon="mdi:robot"></span>
+            <div class="stat-value">96.7%</div>
+            <div class="stat-label">模型准确率</div>
+            <div class="stat-change negative">
+              <span class="iconify mr-1" data-icon="mdi:trending-down"></span>
+              -0.3% 较上周
+            </div>
+          </div>
+          
+          <div class="stat-card">
+            <span class="iconify text-yellow-400 text-xl" data-icon="mdi:server"></span>
+            <div class="stat-value">2.8s</div>
+            <div class="stat-label">平均响应时间</div>
+            <div class="stat-change negative">
+              <span class="iconify mr-1" data-icon="mdi:trending-up"></span>
+              +0.6s 较昨日
+            </div>
+          </div>
+        </div>
+        
+        <!-- 图表区域 -->
+        <div class="grid-2">
+          <div class="card">
+            <div class="section-title">
+              <span class="iconify mr-2" data-icon="mdi:chart-line"></span>
+              问诊量趋势
+            </div>
+            <div class="chart-container">
+              <canvas id="consultationChart"></canvas>
+            </div>
+          </div>
+          
+          <div class="card">
+            <div class="section-title">
+              <span class="iconify mr-2" data-icon="mdi:pie-chart"></span>
+              疾病类型分布
+            </div>
+            <div class="chart-container">
+              <canvas id="diseaseChart"></canvas>
+            </div>
+          </div>
+        </div>
+        
+        <!-- 系统状态和模型性能 -->
+        <div class="grid-2">
+          <div class="card">
+            <div class="section-title">
+              <span class="iconify mr-2" data-icon="mdi:server"></span>
+              系统状态
+            </div>
+            
+            <div class="space-y-4">
+              <div class="flex justify-between items-center">
+                <div>
+                  <div class="font-medium">API服务器</div>
+                  <div class="text-sm text-gray-400">处理用户请求和AI模型调用</div>
+                </div>
+                <span class="status-badge status-active">
+                  <span class="iconify mr-1" data-icon="mdi:check-circle"></span>
+                  运行正常
+                </span>
+              </div>
+              
+              <div class="flex justify-between items-center">
+                <div>
+                  <div class="font-medium">数据库服务</div>
+                  <div class="text-sm text-gray-400">存储用户数据和病历记录</div>
+                </div>
+                <span class="status-badge status-active">
+                  <span class="iconify mr-1" data-icon="mdi:check-circle"></span>
+                  运行正常
+                </span>
+              </div>
+              
+              <div class="flex justify-between items-center">
+                <div>
+                  <div class="font-medium">QiZhenGPT模型</div>
+                  <div class="text-sm text-gray-400">医疗实体抽取和诊断辅助</div>
+                </div>
+                <span class="status-badge status-warning">
+                  <span class="iconify mr-1" data-icon="mdi:alert-circle"></span>
+                  响应缓慢
+                </span>
+              </div>
+              
+              <div class="flex justify-between items-center">
+                <div>
+                  <div class="font-medium">向量数据库</div>
+                  <div class="text-sm text-gray-400">存储医学知识库</div>
+                </div>
+                <span class="status-badge status-active">
+                  <span class="iconify mr-1" data-icon="mdi:check-circle"></span>
+                  运行正常
+                </span>
+              </div>
+            </div>
+          </div>
+          
+          <div class="card">
+            <div class="section-title">
+              <span class="iconify mr-2" data-icon="mdi:robot"></span>
+              模型性能指标
+            </div>
+            
+            <div class="space-y-4">
+              <div>
+                <div class="flex justify-between mb-1">
+                  <span class="text-sm">实体抽取准确率</span>
+                  <span class="text-sm font-medium">94.2%</span>
+                </div>
+                <div class="w-full bg-gray-700 rounded-full h-2">
+                  <div class="bg-green-500 h-2 rounded-full" style="width: 94.2%"></div>
+                </div>
+              </div>
+              
+              <div>
+                <div class="flex justify-between mb-1">
+                  <span class="text-sm">SOAP生成准确率</span>
+                  <span class="text-sm font-medium">89.7%</span>
+                </div>
+                <div class="w-full bg-gray-700 rounded-full h-2">
+                  <div class="bg-blue-500 h-2 rounded-full" style="width: 89.7%"></div>
+                </div>
+              </div>
+              
+              <div>
+                <div class="flex justify-between mb-1">
+                  <span class="text-sm">诊断建议准确率</span>
+                  <span class="text-sm font-medium">91.5%</span>
+                </div>
+                <div class="w-full bg-gray-700 rounded-full h-2">
+                  <div class="bg-purple-500 h-2 rounded-full" style="width: 91.5%"></div>
+                </div>
+              </div>
+              
+              <div>
+                <div class="flex justify-between mb-1">
+                  <span class="text-sm">响应时间</span>
+                  <span class="text-sm font-medium">2.8s</span>
+                </div>
+                <div class="w-full bg-gray-700 rounded-full h-2">
+                  <div class="bg-yellow-500 h-2 rounded-full" style="width: 70%"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- 最近活动 -->
+        <div class="card">
+          <div class="section-title">
+            <span class="iconify mr-2" data-icon="mdi:clock-outline"></span>
+            最近活动
+          </div>
+          
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>时间</th>
+                <th>用户</th>
+                <th>操作</th>
+                <th>状态</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>2025-11-05 10:23</td>
+                <td>张医生</td>
+                <td>更新了患者李建国的诊断结果</td>
+                <td><span class="status-badge status-active">成功</span></td>
+              </tr>
+              <tr>
+                <td>2025-11-05 09:45</td>
+                <td>系统管理员</td>
+                <td>更新了医学知识库</td>
+                <td><span class="status-badge status-active">成功</span></td>
+              </tr>
+              <tr>
+                <td>2025-11-05 09:12</td>
+                <td>王医生</td>
+                <td>修正了AI提取的实体信息</td>
+                <td><span class="status-badge status-active">成功</span></td>
+              </tr>
+              <tr>
+                <td>2025-11-05 08:56</td>
+                <td>系统</td>
+                <td>模型响应超时，已自动重启服务</td>
+                <td><span class="status-badge status-warning">警告</span></td>
+              </tr>
+              <tr>
+                <td>2025-11-05 08:30</td>
+                <td>李医生</td>
+                <td>完成了5例问诊记录</td>
+                <td><span class="status-badge status-active">成功</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <script>
+    // 初始化图表
+    document.addEventListener('DOMContentLoaded', function() {
+      // 问诊量趋势图
+      const consultationCtx = document.getElementById('consultationChart').getContext('2d');
+      const consultationChart = new Chart(consultationCtx, {
+        type: 'line',
+        data: {
+          labels: ['11-01', '11-02', '11-03', '11-04', '11-05'],
+          datasets: [{
+            label: '问诊数量',
+            data: [285, 302, 315, 327, 340],
+            borderColor: '#3B82F6',
+            backgroundColor: 'rgba(59, 130, 246, 0.1)',
+            tension: 0.3,
+            fill: true
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              labels: {
+                color: '#E2E8F0'
+              }
+            }
+          },
+          scales: {
+            x: {
+              grid: {
+                color: '#475569'
+              },
+              ticks: {
+                color: '#94A3B8'
+              }
+            },
+            y: {
+              grid: {
+                color: '#475569'
+              },
+              ticks: {
+                color: '#94A3B8'
+              }
+            }
+          }
+        }
+      });
+      
+      // 疾病类型分布图
+      const diseaseCtx = document.getElementById('diseaseChart').getContext('2d');
+      const diseaseChart = new Chart(diseaseCtx, {
+        type: 'doughnut',
+        data: {
+          labels: ['上呼吸道感染', '消化系统疾病', '皮肤疾病', '神经系统疾病', '其他'],
+          datasets: [{
+            data: [35, 22, 18, 12, 13],
+            backgroundColor: [
+              '#3B82F6',
+              '#10B981',
+              '#F59E0B',
+              '#8B5CF6',
+              '#6B7280'
+            ],
+            borderWidth: 0
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              position: 'right',
+              labels: {
+                color: '#E2E8F0',
+                padding: 15
+              }
+            }
+          }
+        }
+      });
+      
+      // 标签切换功能
+      document.querySelectorAll('.tab-item').forEach(tab => {
+        tab.addEventListener('click', function() {
+          document.querySelectorAll('.tab-item').forEach(t => {
+            t.classList.remove('active');
+          });
+          this.classList.add('active');
+        });
+      });
+      
+      // 导航链接切换功能
+      document.querySelectorAll('.nav-link').forEach(link => {
+        link.addEventListener('click', function() {
+          document.querySelectorAll('.nav-link').forEach(l => {
+            l.classList.remove('active');
+          });
+          this.classList.add('active');
+        });
+      });
+    });
+  </script>
+</body>
+</html>

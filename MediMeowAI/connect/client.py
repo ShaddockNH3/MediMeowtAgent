@@ -50,29 +50,30 @@ def get_real_request_data(stream_mode: bool, patient_dept: str):
 
 def sync_call(patient_dept: str):
     print("\n" + "="*50)
-    print(f"【同步调用测试】病人选择科室：{patient_dept}")
+    print(f"【同步调用测试 - 非流式RPC】病人选择科室：{patient_dept}")
     print("="*50)
     
     with grpc.insecure_channel('127.0.0.1:50051') as channel:
         stub = pb2_grpc.MedicalAIServiceStub(channel)
         request = get_real_request_data(stream_mode=False, patient_dept=patient_dept)
-        response_iterator = stub.ProcessMedicalAnalysis(request)
         
-        for response_chunk in response_iterator:
-            if response_chunk.is_end:
-                # 同步：bytes→Protobuf对象（反序列化）
-                sync_report = pb2.AnalysisReport.FromString(response_chunk.chunk_data)
-                if sync_report.status == "SUCCESS":
-                    # 报告是UTF-8字符串，直接打印
-                    print("同步调用成功，完整报告：")
-                    print(sync_report.structured_report)
-                else:
-                    print(f"同步调用失败")
-                    print(f"   状态: {sync_report.status}")
-                    print(f"   消息: {sync_report.message}")
-                    if sync_report.structured_report:
-                        print(f"   详情: {sync_report.structured_report}")
-                break
+        # 使用新的非流式 RPC 方法
+        sync_report = stub.ProcessMedicalAnalysisSync(request)
+        
+        if sync_report.status == "SUCCESS":
+            print("同步调用成功，完整报告：")
+            print(sync_report.structured_report)
+        elif sync_report.status == "DEPARTMENT_ERROR":
+            print(f"科室选择错误")
+            print(f"   状态: {sync_report.status}")
+            print(f"   消息: {sync_report.message}")
+            print(f"   详情: {sync_report.structured_report}")
+        else:
+            print(f"同步调用失败")
+            print(f"   状态: {sync_report.status}")
+            print(f"   消息: {sync_report.message}")
+            if sync_report.structured_report:
+                print(f"   详情: {sync_report.structured_report}")
 
 def stream_call(patient_dept: str):
     print("\n" + "="*50)

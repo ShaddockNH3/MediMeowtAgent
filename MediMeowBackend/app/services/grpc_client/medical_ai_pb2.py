@@ -24,7 +24,7 @@ _sym_db = _symbol_database.Default()
 
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x10medical_ai.proto\x12\nmedical_ai\"n\n\x0f\x41nalysisRequest\x12\x19\n\x11patient_text_data\x18\x01 \x01(\t\x12\x14\n\x0cimage_base64\x18\x02 \x01(\t\x12\x0e\n\x06stream\x18\x03 \x01(\x08\x12\x1a\n\x12patient_department\x18\x04 \x01(\t\"L\n\x0e\x41nalysisReport\x12\x19\n\x11structured_report\x18\x01 \x01(\t\x12\x0e\n\x06status\x18\x02 \x01(\t\x12\x0f\n\x07message\x18\x03 \x01(\t\"1\n\x0bStreamChunk\x12\x12\n\nchunk_data\x18\x01 \x01(\x0c\x12\x0e\n\x06is_end\x18\x02 \x01(\x08\x32\x64\n\x10MedicalAIService\x12P\n\x16ProcessMedicalAnalysis\x12\x1b.medical_ai.AnalysisRequest\x1a\x17.medical_ai.StreamChunk0\x01\x42\x18\n\x0b\x63om.exampleH\x01\xf8\x01\x01\xa2\x02\x03MEDb\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x10medical_ai.proto\x12\nmedical_ai\"n\n\x0f\x41nalysisRequest\x12\x19\n\x11patient_text_data\x18\x01 \x01(\t\x12\x14\n\x0cimage_base64\x18\x02 \x01(\t\x12\x0e\n\x06stream\x18\x03 \x01(\x08\x12\x1a\n\x12patient_department\x18\x04 \x01(\t\"L\n\x0e\x41nalysisReport\x12\x19\n\x11structured_report\x18\x01 \x01(\t\x12\x0e\n\x06status\x18\x02 \x01(\t\x12\x0f\n\x07message\x18\x03 \x01(\t\"1\n\x0bStreamChunk\x12\x12\n\nchunk_data\x18\x01 \x01(\x0c\x12\x0e\n\x06is_end\x18\x02 \x01(\x08\x32\xbb\x01\n\x10MedicalAIService\x12U\n\x1aProcessMedicalAnalysisSync\x12\x1b.medical_ai.AnalysisRequest\x1a\x1a.medical_ai.AnalysisReport\x12P\n\x16ProcessMedicalAnalysis\x12\x1b.medical_ai.AnalysisRequest\x1a\x17.medical_ai.StreamChunk0\x01\x42\x18\n\x0b\x63om.exampleH\x01\xf8\x01\x01\xa2\x02\x03MEDb\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
@@ -38,6 +38,6 @@ if not _descriptor._USE_C_DESCRIPTORS:
   _globals['_ANALYSISREPORT']._serialized_end=220
   _globals['_STREAMCHUNK']._serialized_start=222
   _globals['_STREAMCHUNK']._serialized_end=271
-  _globals['_MEDICALAISERVICE']._serialized_start=273
-  _globals['_MEDICALAISERVICE']._serialized_end=373
+  _globals['_MEDICALAISERVICE']._serialized_start=274
+  _globals['_MEDICALAISERVICE']._serialized_end=461
 # @@protoc_insertion_point(module_scope)
