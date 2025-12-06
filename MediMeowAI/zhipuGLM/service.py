@@ -161,7 +161,12 @@ def process_medical_analysis(request: AnalysisRequest) -> Union[AnalysisReport, 
                 multimodal_description_block, 
                 retrieved_context
             )
-            return AnalysisReport(structured_report=final_report_text, status="SUCCESS")
+            
+            # 检测科室选择错误
+            if "科室选择错误，请重新选择" in final_report_text or "科室选择错误" in final_report_text:
+                return AnalysisReport(structured_report=final_report_text, status="DEPARTMENT_ERROR")
+            else:
+                return AnalysisReport(structured_report=final_report_text, status="SUCCESS")
         
     except Exception as e:
         error_msg = f"系统内部错误，无法完成分析。详情: {type(e).__name__}"

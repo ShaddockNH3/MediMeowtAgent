@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>患者问诊系统</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://code.iconify.design/3/3.1.1/iconify.min.js"></script>
+  
+  <style>
+    body {
+      background: #ECF0F1;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      color: #5D6D7E;
+    }
+    
+    .app-container {
+      max-width: 1440px;
+      margin: 0 auto;
+      display: flex;
+      min-height: 100vh;
+    }
+    
+    .sidebar {
+      width: 240px;
+      background: #34495E;
+      color: white;
+      padding: 20px 0;
+    }
+    
+    .main-content {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+    }
+    
+    .top-bar {
+      height: 56px;
+      background: white;
+      border-bottom: 1px solid #E5E7EB;
+      padding: 0 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    
+    .content-wrap {
+      flex: 1;
+      padding: 20px;
+      background: #F8FAFC;
+      display: flex;
+      flex-direction: column;
+    }
+    
+    .card {
+      background: white;
+      border-radius: 8px;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+      padding: 24px;
+      margin-bottom: 20px;
+    }
+    
+    .tab-header {
+      display: flex;
+      border-bottom: 1px solid #E5E7EB;
+      padding-bottom: 12px;
+      margin-bottom: 20px;
+    }
+    
+    .tab-item {
+      padding: 8px 16px;
+      margin-right: 12px;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    
+    .tab-item.active {
+      background: #E1F0FA;
+      color: #2C7DB1;
+      font-weight: 500;
+    }
+    
+    .section-title {
+      display: flex;
+      align-items: center;
+      padding-bottom: 12px;
+      border-bottom: 1px solid #F1F5F9;
+      margin-bottom: 20px;
+      color: #2C3E50;
+      font-weight: 600;
+    }
+    
+    .ai-report-header {
+      background: #F8FBFF;
+      border: 1px solid #D4E6F1;
+      border-radius: 8px;
+      padding: 16px;
+      margin-bottom: 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    
+    .ai-panel {
+      background: #F9FDFF;
+      border: 1px solid #D4E6F1;
+      border-radius: 8px;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+    }
+    
+
+    
+    .diagnosis-summary {
+      background: #FFF9EB;
+      border: 1px solid #FFECB3;
+      border-radius: 8px;
+      padding: 16px;
+      margin-top: 20px;
+    }
+    
+    .questionnaire-container {
+      background: white;
+      border-radius: 8px;
+      padding: 24px;
+      margin-bottom: 20px;
+    }
+    
+    .question-item {
+      margin-bottom: 24px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid #F1F5F9;
+    }
+    
+    .question-title {
+      font-weight: 600;
+      margin-bottom: 12px;
+      color: #2C3E50;
+    }
+    
+    .answer-options {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+    
+    .answer-option {
+      background: #F8FAFC;
+      border: 1px solid #E5E7EB;
+      border-radius: 4px;
+      padding: 8px 16px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    
+    .answer-option:hover {
+      background: #E1F0FA;
+      border-color: #2C7DB1;
+    }
+    
+    .answer-option.selected {
+      background: #E1F0FA;
+      border-color: #2C7DB1;
+      color: #2C7DB1;
+      font-weight: 500;
+    }
+    
+    .text-input {
+      width: 100%;
+      padding: 12px;
+      border: 1px solid #E5E7EB;
+      border-radius: 4px;
+      resize: vertical;
+      min-height: 80px;
+    }
+    
+    .progress-bar {
+      height: 6px;
+      background: #ECF0F1;
+      border-radius: 3px;
+      margin-bottom: 20px;
+      overflow: hidden;
+    }
+    
+    .progress-fill {
+      height: 100%;
+      background: #2C7DB1;
+      border-radius: 3px;
+      transition: width 0.3s;
+    }
+    
+    .btn {
+      padding: 10px 20px;
+      border-radius: 4px;
+      font-weight: 500;
+      cursor: pointer;
+      border: none;
+      transition: all 0.2s;
+    }
+    
+    .btn-primary {
+      background: #2C7DB1;
+      color: white;
+    }
+    
+    .btn-primary:hover {
+      background: #256A9B;
+    }
+    
+    .btn-secondary {
+      background: #ECF0F1;
+      color: #5D6D7E;
+      border: 1px solid #BDC3C7;
+    }
+    
+    .btn-secondary:hover {
+      background: #E5E7EB;
+    }
+    
+    .action-buttons {
+      display: flex;
+      gap: 12px;
+      margin-top: 20px;
+      justify-content: flex-end;
+    }
+    
+    .status-indicator {
+      display: flex;
+      align-items: center;
+      background: #FFF9EB;
+      border: 1px solid #FFECB3;
+      border-radius: 4px;
+      padding: 8px 12px;
+      margin-bottom: 16px;
+    }
+  </style>
+</head>
+<body>
+  <div class="app-container">
+    <!-- 左侧导航栏 -->
+    <div class="sidebar">
+      <div class="px-4 py-6">
+        <span class="iconify text-3xl" data-icon="mdi:account-heart"></span>
+        <h1 class="text-xl font-bold mt-4">患者问诊</h1>
+      </div>
+      
+      <nav class="mt-8">
+        <a href="#" class="nav-link block py-3 px-6 hover:bg-gray-700"><span class="iconify mr-3" data-icon="mdi:clipboard-text-outline"></span> 开始问诊</a>
+        <a href="#" class="nav-link active block py-3 px-6 hover:bg-gray-700"><span class="iconify mr-3" data-icon="mdi:message-text"></span> 与医生对话</a>
+        <a href="#" class="nav-link block py-3 px-6 hover:bg-gray-700"><span class="iconify mr-3" data-icon="mdi:file-document"></span> 病历记录</a>
+        <a href="#" class="nav-link block py-3 px-6 hover:bg-gray-700"><span class="iconify mr-3" data-icon="mdi:chart-line"></span> 健康数据</a>
+        <a href="#" class="nav-link block py-3 px-6 hover:bg-gray-700"><span class="iconify mr-3" data-icon="mdi:cog"></span> 个人设置</a>
+      </nav>
+    </div>
+    
+    <div class="main-content">
+      <!-- 顶部状态栏 -->
+      <div class="top-bar">
+        <div class="flex items-center">
+          <h2 class="text-xl font-semibold text-gray-800">在线问诊 - 李建国</h2>
+        </div>
+        
+        <div class="flex items-center space-x-5">
+          <span class="iconify text-xl text-gray-500 cursor-pointer" data-icon="mdi:bell-outline"></span>
+          <div class="flex items-center">
+            <span class="iconify mr-2 text-gray-500" data-icon="mdi:account-circle"></span>
+            <span class="font-medium">李建国</span>
+            <span class="ml-3 text-gray-400">|</span>
+            <span class="ml-3 text-gray-500">ID: M20231105001</span>
+          </div>
+        </div>
+      </div>
+      
+      <!-- 主内容区 -->
+      <div class="content-wrap">
+        <!-- 标签导航 -->
+        <div class="tab-header">
+          <div class="tab-item active">引导式问诊</div>
+          <div class="tab-item">实时对话</div>
+          <div class="tab-item">诊断结果</div>
+        </div>
+        
+        <div class="flex-1">
+          <!-- 左侧：引导式问诊表单 -->
+          <div>
+            <div class="ai-report-header">
+              <div>
+                <h3 class="font-bold text-lg">引导式问诊问卷</h3>
+                <p class="text-sm text-gray-500">请详细描述您的不适症状，帮助医生更准确诊断</p>
+              </div>
+              <div class="flex items-center bg-blue-100 text-blue-800 px-3 py-1 rounded-full">
+                <span class="iconify mr-1" data-icon="mdi:progress-clock"></span> 进行中
+              </div>
+            </div>
+            
+            <div class="card">
+              <div class="progress-bar">
+                <div class="progress-fill" style="width: 40%;"></div>
+              </div>
+              
+              <div class="questionnaire-container" id="questionnaire">
+                <div class="question-item">
+                  <div class="question-title">1. 您的主要不适症状是什么？</div>
+                  <div class="answer-options">
+                    <div class="answer-option selected">头晕</div>
+                    <div class="answer-option">头痛</div>
+                    <div class="answer-option">恶心</div>
+                    <div class="answer-option">颈部僵硬</div>
+                    <div class="answer-option">其他</div>
+                  </div>
+                </div>
+                
+                <div class="question-item">
+                  <div class="question-title">2. 症状持续了多长时间？</div>
+                  <div class="answer-options">
+                    <div class="answer-option selected">2天</div>
+                    <div class="answer-option">1周以内</div>
+                    <div class="answer-option">1-2周</div>
+                    <div class="answer-option">1个月以上</div>
+                  </div>
+                </div>
+                
+                <div class="question-item">
+                  <div class="question-title">3. 症状在什么情况下会加重？</div>
+                  <div class="answer-options">
+                    <div class="answer-option selected">转动脖子时</div>
+                    <div class="answer-option">站立时</div>
+                    <div class="answer-option">躺下时</div>
+                    <div class="answer-option">运动时</div>
+                    <div class="answer-option">其他</div>
+                  </div>
+                </div>
+                
+                <div class="question-item">
+                  <div class="question-title">4. 请详细描述您的不适感受</div>
+                  <textarea class="text-input" placeholder="请尽可能详细地描述您的不适症状、感受和变化...">医生你好，我这两天头晕得厉害，特别是转脖子的时候，感觉后颈也很僵硬。</textarea>
+                </div>
+                
+                <div class="action-buttons">
+                  <button class="btn btn-secondary" id="prevQuestion">
+                    <span class="iconify mr-1" data-icon="mdi:chevron-left"></span>
+                    上一题
+                  </button>
+                  <button class="btn btn-primary" id="nextQuestion">
+                    下一题
+                    <span class="iconify ml-1" data-icon="mdi:chevron-right"></span>
+                  </button>
+                </div>
+              </div>
+              
+              <div class="diagnosis-summary mt-6" id="submissionSuccess" style="display: none;">
+                <div class="flex items-start mb-2">
+                  <span class="iconify mr-2 mt-1 text-green-600" data-icon="mdi:check-circle"></span>
+                  <div>
+                    <h4 class="font-medium">问诊信息已提交</h4>
+                    <p class="text-sm mt-2">您的基本症状信息已成功提交给医生。张医生正在分析您的情况，请稍候...</p>
+                    <div class="mt-4 flex items-center text-sm">
+                      <span class="iconify mr-2 text-blue-600" data-icon="mdi:clock-outline"></span>
+                      <span>预计等待时间：<span id="waitTime">2-5</span>分钟</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <script>
+    // 处理问卷选项选择
+    document.querySelectorAll('.answer-option').forEach(option => {
+      option.addEventListener('click', function() {
+        // 清除同问题的其他选项的选中状态
+        const parent = this.parentElement;
+        parent.querySelectorAll('.answer-option').forEach(opt => {
+          opt.classList.remove('selected');
+        });
+        
+        // 选中当前选项
+        this.classList.add('selected');
+      });
+    });
+    
+    // 处理问卷导航
+    document.getElementById('nextQuestion').addEventListener('click', function() {
+      const progressBar = document.querySelector('.progress-fill');
+      const currentWidth = parseInt(progressBar.style.width) || 40;
+      
+      if (currentWidth < 100) {
+        progressBar.style.width = (currentWidth + 20) + '%';
+        
+        // 如果是最后一步，显示提交成功信息
+        if (currentWidth >= 80) {
+          document.getElementById('questionnaire').style.display = 'none';
+          document.getElementById('submissionSuccess').style.display = 'block';
+          document.getElementById('nextQuestion').style.display = 'none';
+          document.getElementById('prevQuestion').style.display = 'none';
+        }
+      }
+    });
+    
+    document.getElementById('prevQuestion').addEventListener('click', function() {
+      const progressBar = document.querySelector('.progress-fill');
+      const currentWidth = parseInt(progressBar.style.width) || 40;
+      
+      if (currentWidth > 20) {
+        progressBar.style.width = (currentWidth - 20) + '%';
+      }
+    });
+    
+    // 标签切换功能
+    document.querySelectorAll('.tab-item').forEach(tab => {
+      tab.addEventListener('click', function() {
+        document.querySelectorAll('.tab-item').forEach(t => {
+          t.classList.remove('active');
+        });
+        this.classList.add('active');
+        
+        // 这里可以添加标签内容切换的逻辑
+      });
+    });
+  </script>
+</body>
+</html>

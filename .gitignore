@@ -178,7 +178,6 @@ lerna-debug.log*
 # ===================================================================
 /data/
 /mysql-data/
-*.sql
 *.dump
 *.sql.gz
 *.dump.gz
@@ -211,3 +210,4 @@ MediMeowAI/zhipuGLM/pic
 MediMeowAI/zhipuGLM/config/config.yaml
 MediMeowAI/zhipuGLM/chroma_db_medical
 MediMeowAI/connect/pic
+MediMeowBackend/uploads

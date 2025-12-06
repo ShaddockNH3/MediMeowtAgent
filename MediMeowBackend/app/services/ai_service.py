@@ -45,13 +45,26 @@ class AIService:
     @staticmethod
     def _get_user_info(user_id: str, db: Session) -> Dict[str, Any]:
         """获取用户信息"""
+        from datetime import datetime
         user = db.query(User).filter(User.id == user_id).first()
         if not user:
             return {"name": "未知患者", "gender": "未知", "age": "未知"}
+        
+        # 计算年龄
+        age_display = "未知"
+        if user.birth:
+            try:
+                birth_date = datetime.strptime(str(user.birth), "%Y-%m-%d")
+                today = datetime.now()
+                age = today.year - birth_date.year - ((today.month, today.day) < (birth_date.month, birth_date.day))
+                age_display = f"{age}岁"
+            except Exception:
+                pass
+        
         return {
             "name": user.username or "未知患者",
             "gender": user.gender or "未知",
-            "age": "未知"  # User模型没有age字段
+            "age": age_display
         }
 
     @staticmethod
@@ -69,6 +82,23 @@ class AIService:
         text_parts.append(f"姓名：{user_info['name']}")
         text_parts.append(f"性别：{user_info['gender']}")
         text_parts.append(f"年龄：{user_info['age']}")
+        
+        # 添加身高体重（如果有）
+        height = questionnaire_data.get('height')
+        weight = questionnaire_data.get('weight')
+        if height:
+            text_parts.append(f"身高：{height} cm")
+        if weight:
+            text_parts.append(f"体重：{weight} kg")
+        
+        # 计算BMI（如果身高体重都有）
+        if height and weight:
+            try:
+                bmi = weight / ((height / 100) ** 2)
+                text_parts.append(f"BMI：{bmi:.1f}")
+            except:
+                pass
+        
         text_parts.append(f"就诊科室：{department_name}")
         text_parts.append("")
 
@@ -205,7 +235,7 @@ class AIService:
     @staticmethod
     def _call_grpc_ai_service(patient_text_data: str, image_base64: str, department_name: str) -> Dict[str, Any]:
         """
-        调用gRPC AI服务
+        调用gRPC AI服务（非流式）
         
         Args:
             patient_text_data: 患者文本数据
@@ -226,52 +256,68 @@ class AIService:
                     patient_department=department_name
                 )
 
-                response_iterator = stub.ProcessMedicalAnalysis(request)
-
-                for response_chunk in response_iterator:
-                    if response_chunk.is_end:
-                        # 反序列化报告
-                        sync_report = pb2.AnalysisReport.FromString(response_chunk.chunk_data)
-                        if sync_report.status == "SUCCESS":
-                            # 解析structured_report，假设是JSON字符串
-                            try:
-                                result_data = json.loads(sync_report.structured_report)
-                                key_info = result_data.get("key_info", {})
-                                suggested_dept = key_info.get("suggested_department", "")
-                                
-                                # 判断科室是否匹配
-                                is_dept_match = AIService._check_department_match(department_name, suggested_dept)
-                                
-                                return {
-                                    "is_department": is_dept_match,
-                                    "key_info": key_info,
-                                    "analysis_time": result_data.get("analysis_time", "0.5s"),
-                                    "model_version": result_data.get("model_version", "v1.0"),
-                                    "status": "success",
-                                    "structured_report": sync_report.structured_report
-                                }
-                            except json.JSONDecodeError:
-                                # 尝试解析Markdown格式
-                                key_info = AIService._parse_markdown_structured_report(sync_report.structured_report)
-                                suggested_dept = key_info.get("suggested_department", "")
-                                
-                                # 判断科室是否匹配
-                                is_dept_match = AIService._check_department_match(department_name, suggested_dept)
-                                
-                                return {
-                                    "is_department": is_dept_match,
-                                    "key_info": key_info,
-                                    "analysis_time": "0.5s",
-                                    "model_version": "v1.0",
-                                    "status": "success",
-                                    "structured_report": sync_report.structured_report
-                                }
-                        else:
-                            raise Exception(f"AI服务返回失败: {sync_report.message}")
-                    # 如果没有找到结束标记，继续循环
-
-                # 如果循环结束仍未返回，抛出异常
-                raise Exception("gRPC响应不完整，未收到结束标记")
+                # 使用新的非流式RPC方法
+                sync_report = stub.ProcessMedicalAnalysisSync(request)
+                
+                # 处理 SUCCESS 状态
+                if sync_report.status == "SUCCESS":
+                    # 解析structured_report，假设是JSON字符串
+                    try:
+                        result_data = json.loads(sync_report.structured_report)
+                        key_info = result_data.get("key_info", {})
+                        suggested_dept = key_info.get("suggested_department", "")
+                        
+                        # 判断科室是否匹配
+                        is_dept_match = AIService._check_department_match(department_name, suggested_dept)
+                        
+                        return {
+                            "is_department": is_dept_match,
+                            "key_info": key_info,
+                            "analysis_time": result_data.get("analysis_time", "0.5s"),
+                            "model_version": result_data.get("model_version", "v1.0"),
+                            "status": "success",
+                            "structured_report": sync_report.structured_report
+                        }
+                    except json.JSONDecodeError:
+                        # 尝试解析Markdown格式
+                        key_info = AIService._parse_markdown_structured_report(sync_report.structured_report)
+                        suggested_dept = key_info.get("suggested_department", "")
+                        
+                        # 判断科室是否匹配
+                        is_dept_match = AIService._check_department_match(department_name, suggested_dept)
+                        
+                        return {
+                            "is_department": is_dept_match,
+                            "key_info": key_info,
+                            "analysis_time": "0.5s",
+                            "model_version": "v1.0",
+                            "status": "success",
+                            "structured_report": sync_report.structured_report
+                        }
+                
+                # 处理 DEPARTMENT_ERROR 状态
+                elif sync_report.status == "DEPARTMENT_ERROR":
+                    # 科室选择错误，返回特殊标记
+                    return {
+                        "is_department": False,
+                        "key_info": {
+                            "chief_complaint": "科室选择错误",
+                            "key_symptoms": sync_report.structured_report,
+                            "image_summary": "由于科室选择错误，未进行完整分析",
+                            "important_notes": "请重新选择正确的科室",
+                            "risk_level": "未评估",
+                            "suggested_department": "请根据症状重新选择"
+                        },
+                        "analysis_time": "0.1s",
+                        "model_version": "v1.0",
+                        "status": "department_error",
+                        "structured_report": sync_report.structured_report,
+                        "error_message": "科室选择错误，请重新选择正确的科室"
+                    }
+                
+                # 处理其他错误状态
+                else:
+                    raise Exception(f"AI服务返回失败: status={sync_report.status}, message={sync_report.message}")
 
         except Exception as e:
             raise Exception(f"gRPC调用失败: {str(e)}")

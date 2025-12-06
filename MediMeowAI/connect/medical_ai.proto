@@ -29,5 +29,9 @@ message StreamChunk {
 
 // 4. gRPC服务接口
 service MedicalAIService {
+  // 非流式（同步）接口 - 推荐使用
+  rpc ProcessMedicalAnalysisSync (AnalysisRequest) returns (AnalysisReport);
+  
+  // 流式接口 - 保留用于特殊场景
   rpc ProcessMedicalAnalysis (AnalysisRequest) returns (stream StreamChunk);
 }

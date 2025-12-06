@@ -17,6 +17,55 @@ from zhipuGLM.service import (
 )
 
 class MedicalAIService(pb2_grpc.MedicalAIServiceServicer):
+    def ProcessMedicalAnalysisSync(self, request, context):
+        """非流式（同步）RPC 方法 - 推荐使用"""
+        patient_dept = request.patient_department
+        print(f"[同步RPC] 收到分析请求：科室={patient_dept}, 文本长度={len(request.patient_text_data)}, 图片Base64长度={len(request.image_base64)}")
+
+        try:
+            print("正在调用AI分析服务（同步模式）...")
+            # 构建服务请求，强制同步模式
+            service_request = ServiceRequest(
+                patient_text_data=request.patient_text_data,
+                image_base64=request.image_base64,
+                stream=False  # 强制非流式
+            )
+            
+            # 调用AI分析服务
+            result = process_medical_analysis(service_request)
+            print("AI分析服务调用完成")
+            
+            # 返回同步结果
+            if isinstance(result, ServiceReport):
+                print(f"报告状态: {result.status}, 报告长度: {len(result.structured_report)}")
+                return pb2.AnalysisReport(
+                    structured_report=result.structured_report,
+                    status=result.status,
+                    message="AI分析完成"
+                )
+            else:
+                # 服务返回类型异常
+                print("AI服务返回类型异常")
+                return pb2.AnalysisReport(
+                    structured_report="",
+                    status="INTERNAL_ERROR",
+                    message="AI服务返回类型异常"
+                )
+                
+        except Exception as e:
+            # 处理异常
+            error_msg = f"AI服务调用失败: {str(e)}"
+            print(f"错误: {error_msg}")
+            print(f"异常类型: {type(e).__name__}")
+            import traceback
+            print(f"堆栈跟踪:\n{traceback.format_exc()}")
+            short_error_msg = str(e)[:200] + "..." if len(str(e)) > 200 else str(e)
+            return pb2.AnalysisReport(
+                structured_report="",
+                status="INTERNAL_ERROR",
+                message=f"AI分析失败: {short_error_msg}"
+            )
+    
     def ProcessMedicalAnalysis(self, request, context):
         patient_dept = request.patient_department
         print(f"收到分析请求：科室={patient_dept}, 流式={request.stream}, 文本长度={len(request.patient_text_data)}, 图片Base64长度={len(request.image_base64)}")

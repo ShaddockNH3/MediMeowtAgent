@@ -1,3 +1,39 @@
-目前为代码基础架构，内容代码有部分错误，仅供参考
-doctor开发在new\src\apps\doctor_app文件夹以及new\src\router\doctorRoutes.js文件下发挥即可，patient同理
-可能需要共同修改的文件为new\vite.config.ts，new\src\App.vue，new\src\main.ts,new\src\router\index.js.如果有修改应该注意修改之后其他功能还能不能使用。除此之外，其他文件大概率不用改，如果有变动记得说明情况。
+# MediMeow Frontend (Doctor Workstation)
+
+This is the Vue 3 frontend for the MediMeow Doctor Workstation.
+
+## Setup
+
+1. **Install Dependencies**
+   ```bash
+   npm install
+   ```
+
+2. **Run Development Server**
+   ```bash
+   npm run dev
+   ```
+
+3. **Build for Production**
+   ```bash
+   npm run build
+   ```
+
+## Configuration
+
+- **API Proxy**: Configured in `vite.config.js` to proxy `/api` to `http://localhost:8000`.
+- **Port**: Default Vite port (usually 5173).
+
+## Features
+
+- **Doctor Login**: Authenticate using doctor credentials.
+- **Patient Queue**: View list of assigned patients (fetched from backend).
+- **Patient Detail**: View patient summary, AI analysis, and submit diagnosis.
+- **Responsive UI**: Built with Tailwind CSS.
+
+## Project Structure
+
+- `src/views`: Page components (Login, Dashboard, Detailed Patient View).
+- `src/components`: Reusable layout components (Sidebar, TopBar).
+- `src/stores`: State management (Auth, Patient) using Pinia.
+- `src/api`: Axios setup for API communication.

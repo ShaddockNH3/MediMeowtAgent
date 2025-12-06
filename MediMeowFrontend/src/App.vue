@@ -1,12 +1,10 @@
-<template>
-
-  <router-view />
-</template>
-
 <script setup>
-
 </script>
 
-<style>
+<template>
+  <router-view></router-view>
+</template>
 
+<style>
+/* Global styles if needed */
 </style>

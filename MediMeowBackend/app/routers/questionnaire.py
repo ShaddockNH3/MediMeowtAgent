@@ -195,11 +195,15 @@ async def get_submitted_questionnaires(
     """获取用户的所有已提交问卷列表"""
     target_user_id = user_id if user_id else current_user["user_id"]
     
+    print(f"[DEBUG] 查询用户 {target_user_id} 的已提交问卷")
+    
     # 查询该用户的所有就诊记录（按创建时间倒序）
     records = db.query(MedicalRecord).filter(
         MedicalRecord.user_id == target_user_id,
         MedicalRecord.deleted_at.is_(None)
     ).order_by(MedicalRecord.created_at.desc()).all()
+    
+    print(f"[DEBUG] 找到 {len(records)} 条就诊记录")
     
     if not records:
         return success_response(
@@ -223,6 +227,7 @@ async def get_submitted_questionnaires(
         ).first()
         
         if not submission:
+            print(f"[DEBUG] 警告：就诊记录 {record.id} 没有找到对应的问卷提交记录 {record.submission_id}")
             continue
         
         # 获取问卷信息
@@ -251,10 +256,19 @@ async def get_submitted_questionnaires(
         
         # 如果有AI分析结果，添加到返回数据
         if submission.ai_result:
+            ai_status = submission.ai_result.get("status", "success")
             record_data["ai_result"] = {
                 "is_department": submission.ai_result.get("is_department", True),
-                "key_info": submission.ai_result.get("key_info", {})
+                "key_info": submission.ai_result.get("key_info", {}),
+                "status": ai_status
             }
+            
+            # 如果是科室错误，添加错误信息
+            if ai_status == "department_error":
+                record_data["ai_result"]["error_message"] = submission.ai_result.get(
+                    "error_message", 
+                    "科室选择错误，请重新选择正确的科室"
+                )
         
         result_list.append(record_data)
     
@@ -364,6 +378,10 @@ async def submit_questionnaire(
     db: Session = Depends(get_db)
 ):
     """提交问卷（JSON参数，file_id为数组）"""
+    # 验证用户类型：只有患者（user）可以提交问卷
+    if current_user.get("user_type") == "doctor":
+        return error_response(code="10009", msg="医生账号不能提交问卷，请使用患者账号")
+    
     from app.utils.auth import verify_user_exists
     verify_user_exists(current_user["user_id"], current_user["user_type"], db)
 
@@ -413,11 +431,14 @@ async def submit_questionnaire(
         'questionnaire_id': questionnaire_id,
         'user_id': current_user["user_id"],
         'department_id': department_id,
-        'answers': answers
+        'answers': answers,
+        'height': height,
+        'weight': weight
     }
 
     # 异步处理AI分析，避免阻塞响应
-    background_tasks.add_task(process_ai_analysis, submission.id, questionnaire_data, file_id, db)
+    # 注意：不传入 db session，让后台任务创建自己的 session
+    background_tasks.add_task(process_ai_analysis, submission.id, questionnaire_data, file_id)
 
     return success_response(
         msg="提交成功",
@@ -425,29 +446,57 @@ async def submit_questionnaire(
     )
 
 
-async def process_ai_analysis(submission_id, questionnaire_data, file_ids, db):
-    """后台异步处理AI分析"""
-    submission = db.query(QuestionnaireSubmission).filter(
-        QuestionnaireSubmission.id == submission_id
-    ).first()
-
-    if not submission:
-        return
-
+def process_ai_analysis(submission_id: str, questionnaire_data: dict, file_ids: list):
+    """后台同步处理AI分析（在独立的数据库session中）"""
+    import asyncio
+    from app.database import SessionLocal
+    
+    # 创建独立的数据库 session
+    db = SessionLocal()
     try:
-        ai_result = await AIService.analyze_questionnaire(
-            questionnaire_data=questionnaire_data,
-            file_ids=file_ids
-        )
-        # 保存完整AI分析结果
-        submission.ai_result = ai_result
-        submission.status = "completed"
-        db.commit()
+        submission = db.query(QuestionnaireSubmission).filter(
+            QuestionnaireSubmission.id == submission_id
+        ).first()
+
+        if not submission:
+            return
+
+        # 运行异步的 AI 分析
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        try:
+            ai_result = loop.run_until_complete(
+                AIService.analyze_questionnaire(
+                    questionnaire_data=questionnaire_data,
+                    file_ids=file_ids
+                )
+            )
+            # 保存完整AI分析结果
+            submission.ai_result = ai_result
+            submission.status = "completed"
+            
+            # 检查是否为科室错误
+            if ai_result.get("status") == "department_error":
+                # 科室错误：取消关联的就诊记录，不发送给医生
+                medical_record = db.query(MedicalRecord).filter(
+                    MedicalRecord.submission_id == submission_id
+                ).first()
+                
+                if medical_record:
+                    # 将就诊记录状态设为已取消
+                    medical_record.status = "cancelled"
+                    print(f"科室选择错误，就诊记录 {medical_record.id} 已取消，不会发送给医生")
+            
+            db.commit()
+        finally:
+            loop.close()
     except Exception as e:
         print(f"AI分析失败: {str(e)}")
         import traceback
         traceback.print_exc()
         # AI 失败不影响提交
+    finally:
+        db.close()
 
 
 @router.post("/upload")
