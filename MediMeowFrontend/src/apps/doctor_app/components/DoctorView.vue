@@ -1,6 +1,6 @@
 <template>
   <div class="doctor-home">
-    <!-- 左侧侧边栏 -->
+    <!-- 左侧侧边栏（保持原导航） -->
     <aside class="sidebar">
       <div class="sidebar-header">
         <span class="station-icon">👨‍⚕️</span>
@@ -9,8 +9,8 @@
       <nav class="sidebar-nav">
         <a 
           class="nav-item" 
-          :class="{ active: $route.path === '/doctor/queue' }"
-          @click="goToQueue"
+          :class="{ active: $route.path === '/doctor' }"
+          @click="goToHome"
         >
           <span class="nav-icon">📋</span>
           <span>患者队列</span>
@@ -18,7 +18,7 @@
         <a 
           class="nav-item" 
           :class="{ active: $route.path.startsWith('/doctor/summary') }"
-          @click="goToDetailFromSidebar"
+          @click="goToDetail"
         >
           <span class="nav-icon">👤</span>
           <span>患者详情</span>
@@ -42,7 +42,7 @@
       </nav>
     </aside>
 
-    <!-- 右侧主内容区（彻底简化.value使用） -->
+    <!-- 右侧主内容区（动态显示真实患者信息） -->
     <main class="main-content">
       <header class="top-bar">
         <div class="top-right">
@@ -59,21 +59,30 @@
           <p>当前有 {{ recordIds.length }} 名患者在排队等候</p>
         </div>
 
+        <!-- 状态提示（网络异常/加载中） -->
         <div v-if="loading" class="loading-state">加载待诊列表中...</div>
         <div v-if="errorMsg" class="error-state">{{ errorMsg }}</div>
 
+        <!-- 患者队列列表（动态显示真实/虚拟数据） -->
         <div class="queue-list" v-else>
           <div 
             v-for="(recordId, index) in recordIds" 
             :key="recordId"
             class="queue-item"
-            :class="{ 
-              'first-patient': index === 0, 
-              'selected': recordId === selectedRecordId 
-            }"
-            @click="handlePatientSelect(recordId)"
+            :class="{ 'first-patient': index === 0 }"
           >
-            <span class="patient-id">待诊患者ID：{{ recordId }}</span>
+            <!-- 患者信息：动态显示真实/虚拟数据 -->
+            <div class="patient-info">
+              <span class="patient-index">{{ index + 1 }}.</span>
+              <span class="patient-name">{{ getPatientInfo(recordId).name }}</span>
+              <span class="patient-gender-age">{{ getPatientInfo(recordId).gender }}/{{ getPatientInfo(recordId).age }}岁</span>
+              <div class="patient-ids">
+                <span>记录ID：{{ recordId }}</span>
+                <span>患者ID：{{ recordId }}</span>
+              </div>
+              <span class="patient-complaint">主诉：{{ getPatientInfo(recordId).chiefComplaint }}</span>
+            </div>
+            <!-- 查看病情摘要按钮 -->
             <button class="view-btn" @click="handleViewSummary(recordId)">
               查看病情摘要
             </button>
@@ -87,18 +96,26 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from "vue";
 import { useRouter } from "vue-router";
-import { getDoctorQueue } from "../api/queue";
-import type { DoctorQueueResponse } from "../api/queue";
+// 1. 导入队列接口 + 患者详情接口（获取真实患者信息）
+import { getDoctorQueue, getPatientDetail } from "../api/queue";
+// 2. 导入对应的类型定义
+import type { DoctorQueueResponse, PatientDetailResponse } from "../api/queue";
 
-// 1. 彻底简化路由与状态（避免TS类型歧义）
+// 响应式状态
 const router = useRouter();
 const recordIds = ref<string[]>([]);
-// 关键：用空字符串代替null，消除空值类型问题
-const selectedRecordId = ref<string>(""); 
 const loading = ref(false);
 const errorMsg = ref("");
 
-// 2. 计算属性提取医生信息（避免JSON.parse的TS警告）
+// 3. 新增：存储后端返回的真实患者信息（recordId -> 患者详情）
+const patientRealInfo = ref<Record<string, {
+  name: string;      // 真实姓名
+  gender: string;    // 真实性别
+  age: number;       // 真实年龄
+  chiefComplaint: string; // 真实主诉
+}>>({});
+
+// 医生信息（从localStorage读取）
 const doctorInfo = computed(() => {
   const info = localStorage.getItem("doctorInfo");
   return info ? JSON.parse(info) : { username: "张医生", department: "呼吸内科", id: "" };
@@ -107,15 +124,40 @@ const doctorName = computed(() => doctorInfo.value.username);
 const department = computed(() => doctorInfo.value.department);
 const doctorId = computed(() => doctorInfo.value.id);
 
-// 3. 页面加载：极简逻辑+错误兜底
+// 4. 页面加载：请求患者队列 + 批量请求患者真实详情
 onMounted(async () => {
   loading.value = true;
   try {
     if (!doctorId.value) throw new Error("医生信息未找到");
     
-    const res: DoctorQueueResponse = await getDoctorQueue(doctorId.value);
-    recordIds.value = res.base.code === "10000" ? res.data.record_ids : [];
-    errorMsg.value = res.base.code !== "10000" ? res.base.msg || "加载失败" : "";
+    // 步骤1：获取患者队列的record_ids
+    const queueRes: DoctorQueueResponse = await getDoctorQueue(doctorId.value);
+    if (queueRes.base.code !== "10000") throw new Error(queueRes.base.msg || "队列加载失败");
+    recordIds.value = queueRes.data.record_ids;
+
+    // 步骤2：批量请求每个患者的真实详情（获取姓名、性别、年龄、主诉）
+    if (recordIds.value.length > 0) {
+      // 并行请求所有患者详情，提高性能
+      const patientPromises = recordIds.value.map(async (id) => {
+        try {
+          const detailRes: PatientDetailResponse = await getPatientDetail(id);
+          if (detailRes.base.code === "10000") {
+            // 存储真实患者信息到映射表
+            patientRealInfo.value[id] = {
+              name: detailRes.data.name || `未知患者(${id.slice(-4)})`,
+              gender: detailRes.data.gender || "未知",
+              age: detailRes.data.age || 0,
+              chiefComplaint: detailRes.data.chiefComplaint || "无"
+            };
+          }
+        } catch (err) {
+          // 单个患者详情请求失败不影响整体，仅打印警告
+          console.warn(`获取患者${id}详情失败：`, err);
+        }
+      });
+      // 等待所有请求完成
+      await Promise.all(patientPromises);
+    }
   } catch (err: any) {
     errorMsg.value = err.message || "网络异常";
   } finally {
@@ -123,53 +165,49 @@ onMounted(async () => {
   }
 });
 
-// 4. 统一事件处理（避免模板中直接操作.value）
-const handlePatientSelect = (recordId: string) => {
-  selectedRecordId.value = recordId;
-  // 新增：存入localStorage，供其他页面跳转时使用
-  localStorage.setItem("recentRecordId", recordId);
+// 5. 新增：动态获取患者信息（优先真实，次选虚拟）
+const getPatientInfo = (recordId: string) => {
+  // 如果有后端返回的真实数据，直接使用
+  if (patientRealInfo.value[recordId]) {
+    return patientRealInfo.value[recordId];
+  }
+  // 无真实数据时，返回虚拟兜底（保证页面正常显示）
+  return {
+    name: `未知患者(${recordId.slice(-4)})`,
+    gender: "未知",
+    age: 0,
+    chiefComplaint: "无"
+  };
 };
 
+// 点击查看病情摘要（跳转详情页）
 const handleViewSummary = (recordId: string) => {
-  selectedRecordId.value = recordId;
-  localStorage.setItem("recentRecordId", recordId); // 新增：缓存最近选择的患者ID
+  localStorage.setItem("recentRecordId", recordId);
   router.push(`/doctor/summary/${recordId}`);
 };
 
-// 5. 导航函数：路径对齐+缓存兜底
-const goToQueue = () => router.push("/doctor/queue"); // 修改：匹配路由配置的队列页面
-
-const goToDetailFromSidebar = () => {
-  // 优化：优先用缓存的recordId，再用当前选中的
-  const targetId = selectedRecordId.value || localStorage.getItem("recentRecordId");
-  if (targetId) {
-    router.push(`/doctor/summary/${targetId}`);
-  } else {
-    alert("请先选择患者或从队列中选择");
-  }
+// 导航函数
+const goToHome = () => router.push("/doctor");
+const goToDetail = () => {
+  const targetId = localStorage.getItem("recentRecordId");
+  targetId ? router.push(`/doctor/summary/${targetId}`) : alert("请先选择患者");
 };
-
 const goToRecord = () => {
-  // 优化：优先用缓存的recordId，再用当前选中的
-  const targetId = selectedRecordId.value || localStorage.getItem("recentRecordId");
-  if (targetId) {
-    router.push(`/doctor/report/${targetId}`);
-  } else {
-    alert("请先选择患者或从队列中选择");
-  }
+  const targetId = localStorage.getItem("recentRecordId");
+  targetId ? router.push(`/doctor/report/${targetId}`) : alert("请先选择患者");
 };
-
 const goToImport = () => router.push("/doctor/questionnaire/import");
 </script>
 
 <style scoped>
-/* 样式完全复用，无修改 */
+/* 全局布局 */
 .doctor-home {
   display: flex;
   min-height: 100vh;
   font-family: "Microsoft YaHei", Arial, sans-serif;
 }
 
+/* 侧边栏样式 */
 .sidebar {
   width: 180px;
   background-color: #1A365D;
@@ -217,13 +255,13 @@ const goToImport = () => router.push("/doctor/questionnaire/import");
   font-size: 16px;
 }
 
+/* 主内容区 */
 .main-content {
   flex: 1;
   background-color: #F5F7FA;
   display: flex;
   flex-direction: column;
 }
-
 .top-bar {
   height: 50px;
   background-color: #FFFFFF;
@@ -251,6 +289,7 @@ const goToImport = () => router.push("/doctor/questionnaire/import");
   color: #86909C;
 }
 
+/* 患者队列区域 */
 .content-area {
   padding: 20px 30px;
 }
@@ -273,6 +312,7 @@ const goToImport = () => router.push("/doctor/questionnaire/import");
   font-size: 14px;
 }
 
+/* 状态提示 */
 .loading-state, .error-state {
   padding: 30px;
   background-color: #FFFFFF;
@@ -285,6 +325,7 @@ const goToImport = () => router.push("/doctor/questionnaire/import");
   background-color: #FFF1F0;
 }
 
+/* 患者队列列表（与图二样式一致） */
 .queue-list {
   display: flex;
   flex-direction: column;
@@ -298,25 +339,47 @@ const goToImport = () => router.push("/doctor/questionnaire/import");
   padding: 12px 15px;
   display: flex;
   justify-content: space-between;
-  align-items: center;
-  cursor: pointer;
-  transition: border-color 0.2s;
+  align-items: flex-start;
+  border-left: 3px solid #FAAD14;
 }
 .queue-item.first-patient {
   background-color: #FFF9E8;
-  border-left: 3px solid #FAAD14;
 }
-.queue-item.selected {
-  border-color: #3B82F6;
-  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.15);
+
+/* 患者信息样式 */
+.patient-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 }
-.queue-item:hover {
-  border-color: #C9CDD4;
+.patient-index {
+  font-weight: 600;
+  margin-right: 8px;
 }
-.patient-id {
+.patient-name {
   font-size: 14px;
   color: #4E5969;
+  font-weight: 500;
 }
+.patient-gender-age {
+  font-size: 12px;
+  color: #86909C;
+  margin-left: 8px;
+}
+.patient-ids {
+  font-size: 12px;
+  color: #86909C;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 4px 0;
+}
+.patient-complaint {
+  font-size: 12px;
+  color: #86909C;
+}
+
+/* 按钮样式 */
 .view-btn {
   padding: 6px 12px;
   background-color: #1890FF;
@@ -326,6 +389,7 @@ const goToImport = () => router.push("/doctor/questionnaire/import");
   cursor: pointer;
   font-size: 14px;
   transition: background-color 0.2s;
+  align-self: center;
 }
 .view-btn:hover {
   background-color: #096DD9;
