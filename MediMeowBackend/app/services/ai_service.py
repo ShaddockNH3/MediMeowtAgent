@@ -103,6 +103,65 @@ class AIService:
         return "患者描述了相关症状，请查看问卷详情"
 
     @staticmethod
+    def _check_department_match(user_department: str, suggested_department: str) -> bool:
+        """
+        判断用户选择的科室与AI建议的科室是否匹配
+        
+        Args:
+            user_department: 用户选择的科室名称
+            suggested_department: AI建议的科室名称
+            
+        Returns:
+            True 如果匹配，False 如果不匹配
+        """
+        if not suggested_department or not user_department:
+            return True  # 如果缺少信息，默认匹配
+        
+        # 标准化处理：去除空白、转小写
+        user_dept = user_department.strip().lower()
+        suggested_dept = suggested_department.strip().lower()
+        
+        # 完全匹配
+        if user_dept == suggested_dept:
+            return True
+        
+        # 包含匹配（处理"内科" vs "呼吸内科"等情况）
+        if user_dept in suggested_dept or suggested_dept in user_dept:
+            return True
+        
+        # 科室别名映射（可扩展）
+        department_aliases = {
+            "内科": ["呼吸内科", "消化内科", "心内科", "神经内科", "内分泌科", "血液科", "肾内科", "风湿免疫科"],
+            "外科": ["普外科", "骨科", "泌尿外科", "神经外科", "心胸外科", "肝胆外科", "胃肠外科"],
+            "妇产科": ["妇科", "产科", "妇产"],
+            "儿科": ["小儿科", "新生儿科", "儿童"],
+            "五官科": ["眼科", "耳鼻喉科", "口腔科", "耳鼻咽喉科"],
+            "皮肤科": ["皮肤性病科", "皮肤"],
+            "精神科": ["心理科", "精神心理科", "心理"],
+            "急诊科": ["急诊", "急救"],
+        }
+        
+        # 检查是否属于同一大类
+        for main_dept, sub_depts in department_aliases.items():
+            main_dept_lower = main_dept.lower()
+            sub_depts_lower = [s.lower() for s in sub_depts]
+            
+            user_in_group = (user_dept == main_dept_lower or 
+                           user_dept in sub_depts_lower or
+                           any(sub in user_dept for sub in sub_depts_lower) or
+                           main_dept_lower in user_dept)
+            
+            suggested_in_group = (suggested_dept == main_dept_lower or 
+                                 suggested_dept in sub_depts_lower or
+                                 any(sub in suggested_dept for sub in sub_depts_lower) or
+                                 main_dept_lower in suggested_dept)
+            
+            if user_in_group and suggested_in_group:
+                return True
+        
+        return False
+
+    @staticmethod
     def _parse_markdown_structured_report(markdown_text: str) -> Dict[str, Any]:
         """解析Markdown格式的structured_report"""
         key_info = {
@@ -145,7 +204,17 @@ class AIService:
 
     @staticmethod
     def _call_grpc_ai_service(patient_text_data: str, image_base64: str, department_name: str) -> Dict[str, Any]:
-        """调用gRPC AI服务"""
+        """
+        调用gRPC AI服务
+        
+        Args:
+            patient_text_data: 患者文本数据
+            image_base64: 图片base64编码
+            department_name: 用户选择的科室名称（用于匹配判断）
+            
+        Returns:
+            包含 is_department 判断结果的分析结果
+        """
         try:
             ai_service_host = os.getenv('AI_SERVICE_HOST', '127.0.0.1:50051')
             with grpc.insecure_channel(ai_service_host) as channel:
@@ -167,9 +236,15 @@ class AIService:
                             # 解析structured_report，假设是JSON字符串
                             try:
                                 result_data = json.loads(sync_report.structured_report)
+                                key_info = result_data.get("key_info", {})
+                                suggested_dept = key_info.get("suggested_department", "")
+                                
+                                # 判断科室是否匹配
+                                is_dept_match = AIService._check_department_match(department_name, suggested_dept)
+                                
                                 return {
-                                    "is_department": True,
-                                    "key_info": result_data.get("key_info", {}),
+                                    "is_department": is_dept_match,
+                                    "key_info": key_info,
                                     "analysis_time": result_data.get("analysis_time", "0.5s"),
                                     "model_version": result_data.get("model_version", "v1.0"),
                                     "status": "success",
@@ -178,9 +253,13 @@ class AIService:
                             except json.JSONDecodeError:
                                 # 尝试解析Markdown格式
                                 key_info = AIService._parse_markdown_structured_report(sync_report.structured_report)
-                                key_info["suggested_department"] = department_name
+                                suggested_dept = key_info.get("suggested_department", "")
+                                
+                                # 判断科室是否匹配
+                                is_dept_match = AIService._check_department_match(department_name, suggested_dept)
+                                
                                 return {
-                                    "is_department": True,
+                                    "is_department": is_dept_match,
                                     "key_info": key_info,
                                     "analysis_time": "0.5s",
                                     "model_version": "v1.0",

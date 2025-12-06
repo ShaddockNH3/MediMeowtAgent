@@ -104,7 +104,7 @@ def start_server(dev_mode=True):
                 sys.executable, "-m", "uvicorn",
                 "main:app",
                 "--host", "0.0.0.0",
-                "--port", "8001"
+                "--port", "8000"
             ])
     except Exception as e:
         return False

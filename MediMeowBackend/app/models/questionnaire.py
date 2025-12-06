@@ -32,6 +32,10 @@ class QuestionnaireSubmission(Base):
     answers = Column(JSON, nullable=False)  # 答案数据
     file_ids = Column(JSON, nullable=True)  # 上传的文件ID列表
     
+    # 用户身高体重
+    height = Column(Integer, nullable=True, comment="身高(cm)")
+    weight = Column(Integer, nullable=True, comment="体重(kg)")
+    
     # AI分析结果
     ai_result = Column(JSON, nullable=True)
     status = Column(String(20), default="pending")  # pending, processing, completed, draft
