@@ -163,7 +163,7 @@ def process_medical_analysis(request: AnalysisRequest) -> Union[AnalysisReport, 
             )
             
             # 检测科室选择错误
-            if "科室选择错误，请重新选择" in final_report_text or "科室选择错误" in final_report_text:
+            if "科室选择错误，请重新选择" in final_report_text or "科室选择错误" in final_report_text or len(final_report_text.strip()) < 50:
                 return AnalysisReport(structured_report=final_report_text, status="DEPARTMENT_ERROR")
             else:
                 return AnalysisReport(structured_report=final_report_text, status="SUCCESS")

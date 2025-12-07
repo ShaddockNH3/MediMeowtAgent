@@ -72,13 +72,7 @@ const handleLogin = async () => {
           {{ errorMsg }}
         </div>
         
-        <div class="flex justify-between items-center mb-6">
-          <div>
-            <input type="checkbox" id="remember" class="mr-2">
-            <label for="remember" class="text-gray-600">记住我</label>
-          </div>
-          <a href="#" class="text-blue-600 hover:underline">忘记密码?</a>
-        </div>
+
         
         <button 
           class="login-btn" 

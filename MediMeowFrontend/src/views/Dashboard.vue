@@ -27,11 +27,27 @@ const filteredPatients = computed(() => {
   })
 })
 
+const maskName = (name) => {
+    if (!name) return '未知'
+    if (name.length <= 1) return '*'
+    if (name.length === 2) return name[0] + '*'
+    // For > 2 chars, keep first and last, mask middle
+    return name[0] + '*'.repeat(name.length - 2) + name[name.length - 1]
+}
+
+const maskPhone = (phone) => {
+    if (!phone) return '-'
+    if (phone.length < 4) return phone 
+    // Keep last 4, mask everything before
+    return '*'.repeat(phone.length - 4) + phone.slice(-4)
+}
+
 const getStatusClass = (patient) => {
     // Mock random status for demo purposes since backend doesn't provide it in summary
     // In real app, `patient.status` would come from API
     return 'status-stable'
 }
+
 
 const getStatusLabel = (patient) => {
     return '待接诊'
@@ -126,7 +142,7 @@ onMounted(() => {
                       <div class="mr-3 bg-blue-100 rounded-full w-8 h-8 flex items-center justify-center text-blue-600">
                         <Icon icon="mdi:account" />
                       </div>
-                      <div class="font-medium">{{ patient.user?.username || '未知' }}</div>
+                      <div class="font-medium">{{ maskName(patient.user?.username) }}</div>
                     </div>
                   </td>
                   <td>
@@ -134,7 +150,7 @@ onMounted(() => {
                         patient.user?.birth ? (new Date().getFullYear() - new Date(patient.user?.birth).getFullYear()) : '-' 
                     }}岁
                   </td>
-                  <td>{{ patient.user?.phone_number }}</td>
+                  <td>{{ maskPhone(patient.user?.phone_number) }}</td>
                   <td>{{ patient.time || '-' }}</td>
                   <td>
                     <span class="status-badge" :class="getStatusClass(patient)">

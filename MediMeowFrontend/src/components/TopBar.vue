@@ -12,7 +12,7 @@ const departmentName = computed(() => authStore.doctor?.department_name || 'зІСе
 
 const handleLogout = () => {
   authStore.logout()
-  router.push({ name: 'login' })
+  router.push({ name: 'doctor-login' })
 }
 </script>
 

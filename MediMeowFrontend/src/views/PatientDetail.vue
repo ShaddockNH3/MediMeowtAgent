@@ -29,12 +29,14 @@ const fetchDetail = async () => {
             patientData.value = existing
         } else {
             const res = await request.get(`/doctor/summary/${recordId}`)
-            patientData.value = res.data
+            // API returns {base: {...}, data: {...}}, extract the inner data
+            patientData.value = res.data?.data || res.data
         }
     } catch (err) {
         console.error(err)
         alert('加载详情失败')
     } finally {
+        console.log('patientData loaded:', JSON.stringify(patientData.value, null, 2))
         loading.value = false
     }
 }
@@ -108,10 +110,7 @@ onMounted(() => {
               <!-- AI Analysis -->
               <div class="card">
                   <div class="card-header blue-header flex justify-between items-center">
-                      <span><Icon icon="mdi:robot" class="inline mr-2" /> AI 辅助诊断分析</span>
-                      <span class="text-xs font-normal text-gray-500">
-                          {{ userInfo.username }} | {{ userInfo.gender === 'male' ? '男' : userInfo.gender === 'female' ? '女' : '未知' }} | {{ userInfo.age }} | 提交于: {{ patientData.time || '未知' }}
-                      </span>
+                      <span><Icon icon="mdi:robot" class="inline mr-2" /> AI 辅助诊断分析 </span>
                   </div>
                   <div class="p-6">
                       <!-- Structured Report -->

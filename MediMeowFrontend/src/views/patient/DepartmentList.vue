@@ -4,7 +4,10 @@ import { useRouter } from 'vue-router'
 import { Icon } from '@iconify/vue'
 import request from '../../api/request'
 
+import { useAuthStore } from '../../stores/auth'
+
 const router = useRouter()
+const authStore = useAuthStore()
 const departments = ref([])
 const loading = ref(true)
 const error = ref(null)
@@ -23,6 +26,20 @@ const fetchDepartments = async () => {
 }
 
 const selectDepartment = (deptId) => {
+    // Check if user has completed real name verification
+    // Default username is "默认用户{phone}" - not considered verified
+    const user = authStore.user
+    console.log('Checking user for real name verification:', user)
+    
+    // User hasn't verified if username starts with "默认用户"
+    const isDefaultUser = user?.username?.startsWith('默认用户')
+    
+    if (isDefaultUser || !user?.username) {
+        if (confirm('为了提供准确的问诊服务，我们需要您先完善实名信息。是否立即前往？')) {
+            router.push({ name: 'patient-bind' })
+        }
+        return
+    }
     router.push({ name: 'questionnaire', params: { deptId } })
 }
 

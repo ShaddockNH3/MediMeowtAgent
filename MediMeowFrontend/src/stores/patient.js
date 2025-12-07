@@ -38,7 +38,8 @@ export const usePatientStore = defineStore('patient', {
                     request.get(`/doctor/summary/${id}`)
                         .then(res => ({
                             record_id: id,
-                            ...res.data
+                            // API returns {base: {...}, data: {...}}, extract inner data
+                            ...(res.data?.data || res.data)
                         }))
                         .catch(err => {
                             console.error(`Failed to fetch summary for ${id}`, err)

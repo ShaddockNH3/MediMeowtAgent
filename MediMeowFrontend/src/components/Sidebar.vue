@@ -10,21 +10,9 @@ import { Icon } from '@iconify/vue'
     </div>
     
     <nav class="mt-8">
-      <router-link to="/" class="nav-link block py-3 px-6 hover:bg-gray-700 flex items-center" active-class="active">
-        <Icon icon="mdi:account-group" class="mr-3 text-xl" /> 患者管理
-      </router-link>
-      <a href="#" class="nav-link block py-3 px-6 hover:bg-gray-700 flex items-center">
+      <router-link to="/doctor/dashboard" class="nav-link block py-3 px-6 hover:bg-gray-700 flex items-center" active-class="active">
         <Icon icon="mdi:card-account-details" class="mr-3 text-xl" /> 病历详情
-      </a>
-      <a href="#" class="nav-link block py-3 px-6 hover:bg-gray-700 flex items-center">
-        <Icon icon="mdi:stethoscope" class="mr-3 text-xl" /> 诊断工具
-      </a>
-      <a href="#" class="nav-link block py-3 px-6 hover:bg-gray-700 flex items-center">
-        <Icon icon="mdi:chart-line" class="mr-3 text-xl" /> 统计分析
-      </a>
-      <a href="#" class="nav-link block py-3 px-6 hover:bg-gray-700 flex items-center">
-        <Icon icon="mdi:cog" class="mr-3 text-xl" /> 系统设置
-      </a>
+      </router-link>
     </nav>
   </div>
 </template>

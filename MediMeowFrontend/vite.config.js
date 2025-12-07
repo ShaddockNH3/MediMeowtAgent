@@ -5,9 +5,14 @@ import vue from '@vitejs/plugin-vue'
 export default defineConfig({
     plugins: [vue()],
     server: {
+        host: '0.0.0.0', 
+        watch: {
+            usePolling: true
+        },
+
         proxy: {
             '/api': {
-                target: 'http://localhost:8001', // Assuming FastAPI backend runs on 8000
+                target: 'http://localhost:8001', 
                 changeOrigin: true,
                 rewrite: (path) => path.replace(/^\/api/, '')
             }

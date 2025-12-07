@@ -32,11 +32,21 @@ const handleLogin = async () => {
         const data = res.data 
         
         authStore.token = data.data?.token || data.token
-        authStore.user = data.data?.user || data.user
-        
         localStorage.setItem('token', authStore.token)
-        localStorage.setItem('user', JSON.stringify(authStore.user))
         localStorage.setItem('role', 'patient')
+        authStore.role = 'patient'
+        
+        // Fetch full user info (login response doesn't include birth/gender/etc)
+        try {
+            const infoRes = await request.get('/user/info')
+            const userInfo = infoRes.data?.data || infoRes.data
+            authStore.user = userInfo
+            localStorage.setItem('user', JSON.stringify(userInfo))
+        } catch (e) {
+            console.warn('Failed to fetch user info, using login response', e)
+            authStore.user = data.data?.user || data.user
+            localStorage.setItem('user', JSON.stringify(authStore.user))
+        }
 
         router.push({ name: 'patient-home' })
     } catch (err) {

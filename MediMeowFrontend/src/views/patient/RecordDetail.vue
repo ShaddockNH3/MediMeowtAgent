@@ -102,13 +102,6 @@ onMounted(() => {
                     <div class="border-t pt-4">
                         <p class="text-gray-800 leading-relaxed" v-html="formatMarkdown(record.key_info.chief_complaint)"></p>
                     </div>
-
-                    <div v-if="record.key_info.important_notes" class="p-4 border border-yellow-200 bg-yellow-50 rounded-lg">
-                         <h3 class="font-bold text-yellow-800 mb-2 flex items-center">
-                             <Icon icon="mdi:alert-circle-outline" class="mr-1"/> 注意事项
-                         </h3>
-                         <p class="text-yellow-900">{{ record.key_info.important_notes }}</p>
-                    </div>
                 </div>
             </div>
 
@@ -125,13 +118,19 @@ onMounted(() => {
             </div>
         </div>
 
-        <!-- Structured Report -->
-        <div v-if="record.structured_report" class="bg-white rounded-xl p-6 shadow-sm">
+        <!-- Department Referral (Success) -->
+        <div v-if="record.is_department && record.department_name" class="bg-white rounded-xl p-6 shadow-sm">
              <h2 class="font-bold text-lg mb-4 flex items-center text-gray-800">
-                <Icon icon="mdi:file-document-outline" class="mr-2 text-2xl text-green-600" />
-                结构化病历报告
+                <Icon icon="mdi:hospital-building" class="mr-2 text-2xl text-green-600" />
+                就诊建议
              </h2>
-             <div class="prose max-w-none text-gray-700 bg-gray-50 p-6 rounded-xl border border-gray-100" v-html="formatMarkdown(record.structured_report)"></div>
+             <div class="bg-green-50 p-6 rounded-xl border border-green-200 text-center">
+                 <Icon icon="mdi:check-circle" class="text-5xl text-green-500 mx-auto mb-4" />
+                 <p class="text-xl text-gray-800 font-medium">
+                     请到 <span class="text-green-600 font-bold text-2xl">{{ record.department_name }}</span> 问诊
+                 </p>
+                 <p class="text-gray-500 mt-2">请携带好相关证件前往挂号</p>
+             </div>
         </div>
 
         <!-- Q&A History -->
