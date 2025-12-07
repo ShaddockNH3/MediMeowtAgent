@@ -81,13 +81,13 @@
 
 ## 🚀 快速开始 (Getting Started)
 
-在linux环境下
+在linux环境下，使用python3.12.3
 
 ### 1. 配置环境变量
 
 **后端配置** (`MediMeowBackend/.env`)
 ```env
-DATABASE_URL=mysql+pymysql://root:your_password@localhost:3306/miaomiao
+DATABASE_URL=mysql+pymysql://root:your_password@localhost:3306/MediMeow_db
 SECRET_KEY=your-secret-key-here-change-in-production
 ```
 

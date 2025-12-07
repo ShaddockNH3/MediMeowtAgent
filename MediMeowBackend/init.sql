@@ -14,11 +14,11 @@ SET time_zone = '+08:00';
 -- 1. 创建数据库
 -- ============================================================
 
-CREATE DATABASE IF NOT EXISTS miaomiao 
+CREATE DATABASE IF NOT EXISTS medimeow_db 
     CHARACTER SET utf8mb4 
     COLLATE utf8mb4_unicode_ci;
 
-USE miaomiao;
+USE medimeow_db;
 
 -- ============================================================
 -- 2. 创建数据表
