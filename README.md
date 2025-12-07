@@ -41,7 +41,7 @@
 <!-- ![阶段一流程图](./docs/img/flow-phase-1.svg){width="400"} -->
 <img src="./docs/img/flow-phase-1.svg" alt="阶段一流程图" width="800px">
 
-1.  **患者输入**: 患者使用自然语言描述症状。
+1.  **患者输入**: 患者填写问卷，使用自然语言描述症状。
 2.  **AI 抽取**: QiZhenGPT 执行首次 `NER` (命名实体识别)，抽取关键实体。
 3.  **医生审核**: 医生在界面上审核高亮的实体，进行 `校对、增删、反馈`。
 4.  **循环迭代**:
@@ -81,9 +81,62 @@
 
 ## 🚀 快速开始 (Getting Started)
 
-```bash
-现在还开始不了哦
+在linux环境下
+
+### 1. 配置环境变量
+
+**后端配置** (`MediMeowBackend/.env`)
+```env
+DATABASE_URL=mysql+pymysql://root:your_password@localhost:3306/miaomiao
+SECRET_KEY=your-secret-key-here-change-in-production
 ```
+
+**AI服务配置** (`MediMeowAI/.env`)
+```env
+GLM_API_KEY=your_glm_api_key_here
+```
+
+### 2. 启动后端服务
+
+```bash
+cd MediMeowBackend
+python3 -m venv venv-backend
+source venv-backend/bin/activate
+pip install -r requirements.txt
+
+# 初始化数据库
+bash init_db.sh
+
+# 启动服务
+python run.py
+```
+
+### 3. 启动AI服务
+
+```bash
+cd MediMeowAI
+python3 -m venv venv-ai
+source venv-ai/bin/activate
+pip install -r requirements.txt
+
+export HF_ENDPOINT=https://hf-mirror.com
+
+# 启动服务
+python ai.py
+```
+
+### 4. 启动前端
+
+```bash
+cd MediMeowFrontend
+npm install
+npm run dev
+```
+
+### 测试账号
+
+- **医生**: 用户名为科室名(如`儿科`)，密码 `123`
+- **患者**: 自行注册
 
 ## Contributors ✨
 

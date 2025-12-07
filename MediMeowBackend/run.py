@@ -19,11 +19,11 @@ def check_python_version():
 
 def check_dependencies():
     """检查依赖包"""
-    requirements_file = Path(__file__).parent / "requirements.txt"
+    # requirements_file = Path(__file__).parent / "requirements.txt"
     
-    if not requirements_file.exists():
-        print("requirements.txt 不存在")
-        return False
+    # if not requirements_file.exists():
+    #     print("requirements.txt 不存在")
+    #     return False
     
     try:
         import fastapi

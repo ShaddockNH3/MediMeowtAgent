@@ -8,7 +8,7 @@ class Settings(BaseSettings):
     
     # 数据库配置 (MariaDB)
     DATABASE_URL: str = Field(
-        default="mysql+pymysql://root:12345@localhost:3306/medimeow_db",
+        default="mysql+pymysql://root:12345@localhost:3306/miaomiao",
         description="MariaDB 数据库连接URL"
     )
     
