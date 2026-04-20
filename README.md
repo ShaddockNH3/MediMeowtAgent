@@ -146,6 +146,10 @@ npm run dev
 - **医生**: 用户名为科室名(如`儿科`)，密码 `123`
 - **患者**: 自行注册
 
+### 开发
+
+[接口文档](https://s.apifox.cn/5cc4458b-8b83-44b3-9ef6-43e156a9d4d4/377159896e0)
+
 ## Contributors ✨
 
 [CONTRIBUTER](/docs/CONTRIBUTER.md)
